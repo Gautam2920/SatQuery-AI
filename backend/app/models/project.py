@@ -1,11 +1,16 @@
 import uuid
+
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.db.base import Base
+
+if TYPE_CHECKING:
+    from backend.app.models.image import Image
 
 
 class Project(Base):
@@ -38,4 +43,9 @@ class Project(Base):
         server_default=func.now(),
         onupdate=func.now(),
         nullable=False,
+    )
+
+    images: Mapped[list["Image"]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
     )

@@ -1,4 +1,5 @@
 from logging.config import fileConfig
+import os
 
 from alembic import context
 from sqlalchemy import create_engine
@@ -6,15 +7,15 @@ from sqlalchemy import pool
 
 from backend.app.core.config import settings
 from backend.app.db.base import Base
+from backend.app.models.image import Image
+from backend.app.models.project import Project
 
-from backend.app.models import Project
-
-import os
 
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
+
 
 database_url = os.getenv("ALEMBIC_DATABASE_URL") or settings.database_url
 
