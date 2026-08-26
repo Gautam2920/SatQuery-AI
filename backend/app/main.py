@@ -1,8 +1,12 @@
 from fastapi import FastAPI
 
+from .core.config import settings
+
+
 app = FastAPI(
-    title="SatQuery AI Backend",
+    title=settings.app_name,
     version="0.1.0",
+    debug=settings.debug,
 )
 
 
