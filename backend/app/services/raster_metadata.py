@@ -1,10 +1,12 @@
 from pathlib import Path
 
 import rasterio
-from shapely.geometry import box
+
+from backend.app.geospatial.footprint import build_footprint
+from backend.app.schemas.raster import RasterBounds, RasterMetadata
 
 
-def extract_raster_metadata(file_path: str | Path) -> dict:
+def extract_raster_metadata(file_path: str | Path) -> RasterMetadata:
     file_path = Path(file_path)
 
     if not file_path.is_file():
@@ -21,27 +23,25 @@ def extract_raster_metadata(file_path: str | Path) -> dict:
             else:
                 crs = src.crs.to_string()
 
-        bounds = src.bounds
-
-        footprint = box(
-            bounds.left,
-            bounds.bottom,
-            bounds.right,
-            bounds.top,
+        bounds = RasterBounds(
+            left=src.bounds.left,
+            bottom=src.bounds.bottom,
+            right=src.bounds.right,
+            top=src.bounds.top,
         )
 
-        return {
-            "width": src.width,
-            "height": src.height,
-            "band_count": src.count,
-            "dtype": src.dtypes[0],
-            "crs": crs,
-            "bounds": {
-                "left": bounds.left,
-                "bottom": bounds.bottom,
-                "right": bounds.right,
-                "top": bounds.top,
-            },
-            "footprint": footprint.wkt,
-            "transform": tuple(src.transform),
-        }
+        return RasterMetadata(
+            width=src.width,
+            height=src.height,
+            band_count=src.count,
+            dtype=src.dtypes[0],
+            crs=crs,
+            bounds=bounds,
+            transform=tuple(src.transform),
+        )
+
+
+def extract_raster_footprint(file_path: str | Path):
+    metadata = extract_raster_metadata(file_path)
+
+    return build_footprint(metadata.bounds)
