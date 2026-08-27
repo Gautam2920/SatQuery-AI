@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import rasterio
+from shapely.geometry import box
 
 
 def extract_raster_metadata(file_path: str | Path) -> dict:
@@ -22,6 +23,13 @@ def extract_raster_metadata(file_path: str | Path) -> dict:
 
         bounds = src.bounds
 
+        footprint = box(
+            bounds.left,
+            bounds.bottom,
+            bounds.right,
+            bounds.top,
+        )
+
         return {
             "width": src.width,
             "height": src.height,
@@ -34,5 +42,6 @@ def extract_raster_metadata(file_path: str | Path) -> dict:
                 "right": bounds.right,
                 "top": bounds.top,
             },
+            "footprint": footprint.wkt,
             "transform": tuple(src.transform),
         }

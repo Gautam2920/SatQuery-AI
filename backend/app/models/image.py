@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
+from geoalchemy2 import Geometry
 from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -102,6 +103,15 @@ class Image(Base):
         String(50),
         nullable=False,
         default="uploaded",
+    )
+
+    footprint: Mapped[object | None] = mapped_column(
+        Geometry(
+            geometry_type="POLYGON",
+            srid=4326,
+            spatial_index=True,
+        ),
+        nullable=True,
     )
 
     created_at: Mapped[datetime] = mapped_column(

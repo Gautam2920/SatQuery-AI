@@ -7,8 +7,9 @@ from sqlalchemy import pool
 
 from backend.app.core.config import settings
 from backend.app.db.base import Base
-from backend.app.models.image import Image
-from backend.app.models.project import Project
+
+from backend.app.models.image import Image  # noqa: F401
+from backend.app.models.project import Project  # noqa: F401
 
 
 config = context.config
@@ -52,6 +53,8 @@ def run_migrations_online() -> None:
 
         with context.begin_transaction():
             context.run_migrations()
+
+    connectable.dispose()
 
 
 if context.is_offline_mode():
