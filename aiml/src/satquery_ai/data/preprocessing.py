@@ -15,22 +15,43 @@ PRITHVI_STD = np.array(
     dtype=np.float32,
 )
 
+PRITHVI_NUM_BANDS = 6
+PRITHVI_IMAGE_SIZE = 224
+
 
 def load_prithvi_tile(path: Path) -> torch.Tensor:
-    with rasterio.open(path) as src:
-        image = src.read()
+    path = Path(path)
 
-    if image.shape[0] != 6:
-        raise ValueError(f"Expected 6 bands, got {image.shape[0]}")
+    if not path.exists():
+        raise FileNotFoundError(f"Satellite image not found: {path}")
 
-    if image.shape[1] < 224 or image.shape[2] < 224:
-        raise ValueError(f"Image is too small: {image.shape[1:]}")
+    with rasterio.open(path) as source:
+        image = source.read()
 
-    image = image[:, :224, :224].astype(np.float32)
+    if image.ndim != 3:
+        raise ValueError(f"Expected 3D image data, got shape {image.shape}")
+
+    if image.shape[0] != PRITHVI_NUM_BANDS:
+        raise ValueError(f"Expected {PRITHVI_NUM_BANDS} bands, got {image.shape[0]}")
+
+    height, width = image.shape[1:]
+
+    if height < PRITHVI_IMAGE_SIZE or width < PRITHVI_IMAGE_SIZE:
+        raise ValueError(
+            f"Image is too small: {height}x{width}. "
+            f"Minimum required size is "
+            f"{PRITHVI_IMAGE_SIZE}x{PRITHVI_IMAGE_SIZE}"
+        )
+
+    image = image[
+        :,
+        :PRITHVI_IMAGE_SIZE,
+        :PRITHVI_IMAGE_SIZE,
+    ].astype(np.float32, copy=False)
 
     mean = PRITHVI_MEAN[:, None, None]
     std = PRITHVI_STD[:, None, None]
 
-    image = (image - mean) / std
+    normalized_image = (image - mean) / std
 
-    return torch.from_numpy(image)
+    return torch.from_numpy(normalized_image)

@@ -13,3 +13,7 @@ env/
 .idea/
 .DS_Store
 Thumbs.db
+aiml/data/raw/
+aiml/data/processed/
+BigEarthNet.txt/
+aiml/src/satquery_ai.egg-info/

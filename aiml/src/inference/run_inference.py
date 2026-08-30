@@ -1,60 +1,54 @@
-import sys
 from pathlib import Path
+import sys
 
 import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from satquery_ai.data.preprocessing import load_prithvi_tile
-from satquery_ai.models.prithvi import PrithviModel
+from satquery_ai.data.scene_loader import load_scene
+from satquery_ai.perception.prithvi import PrithviPerception
 
 
 IMAGE_PATH = Path("aiml/data/raw/Mexico_HLS.S30.T13REM.2018026T173609.v2.0_cropped.tif")
 
 
 def main() -> None:
-    print("Loading satellite image...")
+    print("Loading satellite scene...")
 
-    preprocessed_tile = load_prithvi_tile(IMAGE_PATH)
+    scene = load_scene(IMAGE_PATH)
 
-    print(f"Input shape: {tuple(preprocessed_tile.shape)}")
-    print(f"Input dtype: {preprocessed_tile.dtype}")
+    print(f"Sensor: {scene.sensor}")
+    print(f"Size: {scene.raster.width} x {scene.raster.height}")
+    print(f"Bands: {scene.raster.band_count}")
+    print(f"Resolution: {scene.raster.resolution}")
+    print(f"CRS: {scene.raster.crs}")
 
-    print("\nLoading Prithvi model...")
+    print("\nLoading Prithvi perception model...")
 
-    prithvi_model = PrithviModel()
+    perception = PrithviPerception()
 
-    print(f"Device: {prithvi_model.device}")
+    print(f"Device: {perception.model.device}")
 
-    preprocessed_tile = preprocessed_tile.unsqueeze(0)
+    print("\nRunning perception...")
 
-    print("\nRunning inference...")
+    evidence = perception.analyze(IMAGE_PATH)
 
-    prediction_logits = prithvi_model.predict(preprocessed_tile)
+    print(f"Segmentation logits shape: {tuple(evidence.segmentation_logits.shape)}")
 
-    print(f"Logits shape: {tuple(prediction_logits.shape)}")
-    print(f"Logits dtype: {prediction_logits.dtype}")
+    print(f"Segmentation mask shape: {tuple(evidence.segmentation_mask.shape)}")
 
-    predicted_classes = torch.argmax(prediction_logits, dim=1)
-
-    print(f"Prediction shape: {tuple(predicted_classes.shape)}")
-
-    prediction_mask = predicted_classes[0]
-
-    unique_classes, class_pixel_counts = torch.unique(
-        prediction_mask,
+    classes, counts = torch.unique(
+        evidence.segmentation_mask,
         return_counts=True,
     )
 
-    print("\nPredicted class distribution:")
+    print("\nDiagnostic class distribution:")
 
-    for class_id, pixel_count in zip(
-        unique_classes.tolist(),
-        class_pixel_counts.tolist(),
-    ):
-        class_percentage = (pixel_count / prediction_mask.numel()) * 100
+    total = evidence.segmentation_mask.numel()
 
-        print(f"Class {class_id}: {pixel_count:,} pixels ({class_percentage:.2f}%)")
+    for class_id, count in zip(classes.tolist(), counts.tolist()):
+        percentage = count / total * 100
+        print(f"Class {class_id}: {count:,} pixels ({percentage:.2f}%)")
 
 
 if __name__ == "__main__":
