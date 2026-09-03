@@ -6,6 +6,25 @@ from backend.app.geospatial.footprint import build_footprint
 from backend.app.schemas.raster import RasterBounds, RasterMetadata
 
 
+def _normalize_crs(crs) -> str | None:
+    if crs is None:
+        return None
+
+    epsg = crs.to_epsg()
+
+    if epsg is not None:
+        return f"EPSG:{epsg}"
+
+    crs_string = crs.to_string()
+
+    if crs_string.startswith("EPSG:"):
+        return crs_string
+
+    raise ValueError(
+        f"Unable to normalize raster CRS to an EPSG identifier: {crs_string}"
+    )
+
+
 def extract_raster_metadata(file_path: str | Path) -> RasterMetadata:
     file_path = Path(file_path)
 
@@ -13,15 +32,7 @@ def extract_raster_metadata(file_path: str | Path) -> RasterMetadata:
         raise FileNotFoundError(f"Raster file not found: {file_path}")
 
     with rasterio.open(file_path) as src:
-        crs = None
-
-        if src.crs is not None:
-            epsg = src.crs.to_epsg()
-
-            if epsg is not None:
-                crs = f"EPSG:{epsg}"
-            else:
-                crs = src.crs.to_string()
+        crs = _normalize_crs(src.crs)
 
         bounds = RasterBounds(
             left=src.bounds.left,
