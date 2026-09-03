@@ -1,0 +1,257 @@
+/* ============================================================================
+   SatQuery AI — global stylesheet
+   Groundtruth tokens + Tailwind v4. Tokens stay the contract; Tailwind's theme
+   is mapped onto the live CSS variables (`inline`) so the .gt-landing scope
+   swap keeps working through utility classes.
+   ========================================================================== */
+@import '@fontsource-variable/archivo/index.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/600.css';
+
+@import './tokens.css';
+@import 'tailwindcss';
+
+@theme inline {
+  --color-neutral: var(--neutral);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-border: var(--border);
+  --color-on-surface: var(--on-surface);
+  --color-secondary: var(--secondary);
+  --color-primary: var(--primary);
+  --color-primary-ink: var(--primary-ink);
+  --color-primary-strong: var(--primary-strong);
+  --color-primary-subtle: var(--primary-subtle);
+  --color-tertiary: var(--tertiary);
+  --color-tertiary-strong: var(--tertiary-strong);
+  --color-tertiary-subtle: var(--tertiary-subtle);
+  --color-verified: var(--verified);
+
+  --font-sans: var(--font-core);
+  --font-mono: var(--font-data);
+
+  --radius-none: var(--radius-none);
+  --radius-control: var(--radius-control);
+  --radius-container: var(--radius-container);
+
+  --spacing-xs: var(--space-xs);
+  --spacing-sm: var(--space-sm);
+  --spacing-md: var(--space-md);
+  --spacing-lg: var(--space-lg);
+  --spacing-xl: var(--space-xl);
+  --spacing-xxl: var(--space-xxl);
+
+  --shadow-float: var(--shadow-float);
+
+  --default-transition-duration: var(--dur-state);
+  --default-transition-timing-function: var(--ease-state);
+}
+
+/* ---- base ---------------------------------------------------------------- */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--neutral);
+    color: var(--on-surface);
+    font-family: var(--font-core);
+    font-size: var(--text-body-md-size);
+    line-height: var(--text-body-md-line);
+    font-synthesis-weight: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p,
+  figure {
+    margin: 0;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button {
+    font: inherit;
+    color: inherit;
+  }
+
+  img {
+    max-width: 100%;
+    display: block;
+  }
+
+  /* DESIGN.md focus: 1px + 2px primary outline offset 2 — clears 3:1 on every
+     surface. Applied globally so no interactive element ships without it. */
+  :focus-visible {
+    outline: var(--focus-ring-width) solid var(--primary);
+    outline-offset: var(--focus-ring-offset);
+    border-radius: 1px;
+  }
+
+  ::selection {
+    background: var(--primary-subtle);
+    color: var(--primary-strong);
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+}
+
+/* ---- type scale — DESIGN.md typography tokens as utilities -------------- */
+@utility display {
+  font-family: var(--font-core);
+  font-weight: 600;
+  font-size: var(--text-display-size);
+  line-height: var(--text-display-line);
+  letter-spacing: var(--text-display-tracking);
+}
+@utility headline-lg {
+  font-family: var(--font-core);
+  font-weight: 600;
+  font-size: var(--text-headline-lg-size);
+  line-height: var(--text-headline-lg-line);
+  letter-spacing: var(--text-headline-lg-tracking);
+}
+@utility headline-md {
+  font-family: var(--font-core);
+  font-weight: 600;
+  font-size: var(--text-headline-md-size);
+  line-height: var(--text-headline-md-line);
+  letter-spacing: var(--text-headline-md-tracking);
+}
+@utility title-sm {
+  font-family: var(--font-core);
+  font-weight: 600;
+  font-size: var(--text-title-sm-size);
+  line-height: var(--text-title-sm-line);
+  letter-spacing: var(--text-title-sm-tracking);
+}
+@utility body-lg {
+  font-family: var(--font-core);
+  font-weight: 400;
+  font-size: var(--text-body-lg-size);
+  line-height: var(--text-body-lg-line);
+}
+@utility body-md {
+  font-family: var(--font-core);
+  font-weight: 400;
+  font-size: var(--text-body-md-size);
+  line-height: var(--text-body-md-line);
+}
+@utility body-sm {
+  font-family: var(--font-core);
+  font-weight: 400;
+  font-size: var(--text-body-sm-size);
+  line-height: var(--text-body-sm-line);
+}
+@utility label-caps {
+  font-family: var(--font-core);
+  font-weight: 600;
+  font-size: var(--text-label-caps-size);
+  line-height: var(--text-label-caps-line);
+  letter-spacing: var(--text-label-caps-tracking);
+  text-transform: uppercase;
+}
+@utility data-lg {
+  font-family: var(--font-data);
+  font-weight: 400;
+  font-size: var(--text-data-lg-size);
+  line-height: var(--text-data-lg-line);
+  letter-spacing: var(--text-data-lg-tracking);
+  font-feature-settings: var(--font-feature-data);
+  font-variant-numeric: tabular-nums;
+}
+@utility data-md {
+  font-family: var(--font-data);
+  font-weight: 400;
+  font-size: var(--text-data-md-size);
+  line-height: var(--text-data-md-line);
+  font-feature-settings: var(--font-feature-data);
+  font-variant-numeric: tabular-nums;
+}
+@utility data-sm {
+  font-family: var(--font-data);
+  font-weight: 400;
+  font-size: var(--text-data-sm-size);
+  line-height: var(--text-data-sm-line);
+  letter-spacing: var(--text-data-sm-tracking);
+  font-feature-settings: var(--font-feature-data);
+  font-variant-numeric: tabular-nums;
+}
+@utility prose-measure {
+  max-width: var(--measure-prose);
+  text-wrap: pretty;
+}
+
+/* ---- motion — reserved for state changes and the pipeline advancing ---- */
+@keyframes gt-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+@keyframes gt-indeterminate {
+  from {
+    transform: translateX(-110%);
+  }
+  to {
+    transform: translateX(320%);
+  }
+}
+@keyframes gt-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* No scroll animation, no typing answers, no counting numbers. When the user
+   asks for less motion, honour it — but keep focus outlines instant, never
+   suppressed (unlike the old prototype's blanket `* { transition: none }`). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Thin instrument scrollbars for the workspace panels. */
+@supports (scrollbar-width: thin) {
+  .gt-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+}

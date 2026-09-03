@@ -1,0 +1,175 @@
+/* ============================================================================
+   Groundtruth design tokens — SatQuery AI
+   Ported verbatim from _ds/groundtruth-design-system/tokens/*.css and DESIGN.md.
+
+   The DARK ANALYSIS WORKSPACE is canonical (:root). The LIGHT LANDING is a
+   separately-derived scope (.gt-landing) — same hues re-solved for a paper
+   ground, never an inversion of the dark tokens.
+   No token is #FFFFFF or #000000. No neutral is R=G=B.
+   ========================================================================== */
+
+:root {
+  /* -- neutrals: warm charcoal, OKLCH hue 70-78, chroma 0.006-0.009 --------- */
+  --neutral: #100e0c; /* Cold-start black — shell + imagery canvas */
+  --surface: #191714; /* Console grey — panels, cards, inputs */
+  --surface-raised: #25221f; /* Lit console — popovers, active rows, query field */
+  --border: #3b3733; /* Etched line — 1px hairlines */
+  --on-surface: #e6e2dd; /* Instrument white — primary text (never #fff) */
+  --secondary: #a39d96; /* Legend grey — metadata, coordinates at rest */
+
+  /* -- amber: the one accent — interaction + the system's own output ------- */
+  --primary: #f0a63c; /* Sodium amber */
+  --primary-strong: #fcc364; /* amber text on amber-subtle; hover */
+  --primary-subtle: #3f240a; /* running / interpreted chip fill (dark only) */
+  /* on the dark workspace amber-as-text and amber-as-rule are the same value */
+  --primary-ink: var(--primary);
+
+  /* -- vermilion: detected change AND failure — never colour alone -------- */
+  --tertiary: #eb5f40; /* Flag vermilion */
+  --tertiary-strong: #f77b58; /* vermilion text on panels */
+  --tertiary-subtle: #44150d; /* change chip / alert callout fill (dark only) */
+
+  /* -- the one cool token: value produced by deterministic geospatial SW -- */
+  --verified: #5ac0ab; /* Reticle teal */
+
+  /* -- semantic aliases -------------------------------------------------- */
+  --meter-track: var(--border);
+  --meter-fill: var(--primary);
+  --mark-registration: var(--secondary);
+  --mark-registration-active: var(--primary);
+  --overlay-scrim: rgba(16, 14, 12, 0.62);
+
+  /* -- typography: Archivo carries the voice, IBM Plex Mono every value --- */
+  --font-core: 'Archivo Variable', 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+  --font-data: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-feature-data: 'tnum' 1, 'liga' 0;
+
+  --text-display-size: 3.75rem; /* 60px — landing only */
+  --text-display-line: 1.05;
+  --text-display-tracking: -0.03em;
+  --text-headline-lg-size: 2.25rem; /* 36px */
+  --text-headline-lg-line: 1.12;
+  --text-headline-lg-tracking: -0.022em;
+  --text-headline-md-size: 1.5rem; /* 24px — workspace tops out here */
+  --text-headline-md-line: 1.22;
+  --text-headline-md-tracking: -0.012em;
+  --text-title-sm-size: 1rem; /* 16px */
+  --text-title-sm-line: 1.3;
+  --text-title-sm-tracking: 0.002em;
+  --text-body-lg-size: 1.125rem; /* 18px — the answer */
+  --text-body-lg-line: 1.6;
+  --text-body-md-size: 0.9375rem; /* 15px — base */
+  --text-body-md-line: 1.55;
+  --text-body-sm-size: 0.8125rem; /* 13px */
+  --text-body-sm-line: 1.5;
+  --text-label-caps-size: 0.6875rem; /* 11px */
+  --text-label-caps-line: 1.3;
+  --text-label-caps-tracking: 0.14em;
+  --text-data-lg-size: 1.375rem; /* 22px */
+  --text-data-lg-line: 1.15;
+  --text-data-lg-tracking: -0.01em;
+  --text-data-md-size: 0.8125rem; /* 13px */
+  --text-data-md-line: 1.45;
+  --text-data-sm-size: 0.6875rem; /* 11px */
+  --text-data-sm-line: 1.4;
+  --text-data-sm-tracking: 0.01em;
+
+  --measure-prose: 70ch;
+
+  /* -- shape: 0px measured reality · 3px controls · 6px containers -------- */
+  --radius-none: 0px;
+  --radius-control: 3px;
+  --radius-container: 6px;
+  --radius-dot: 9999px;
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --bracket-size: 12px;
+
+  /* -- spacing: strict 4px scale --------------------------------------- */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 20px;
+  --space-xl: 32px;
+  --space-xxl: 56px;
+  --gutter: 16px;
+  --margin: 32px;
+
+  /* -- layout ---------------------------------------------------------- */
+  --content-max: 1200px;
+  --rail-collapsed: 56px;
+  --rail-expanded: 240px;
+  --col-context: 360px;
+  --col-evidence: 420px;
+  --shell-floor: 1256px; /* 56 + 360 + 420 + 420 */
+
+  /* -- elevation: shadow means "floats and can be dismissed" ---------- */
+  --shadow-none: none;
+  --shadow-float: 0 8px 24px -6px rgba(6, 4, 2, 0.72);
+  --shadow-float-light: 0 8px 24px -6px rgba(34, 29, 25, 0.12);
+
+  /* -- motion: confirmation and explanation, never decoration -------- */
+  --dur-state: 120ms;
+  --dur-surface: 220ms;
+  --dur-pipeline: 400ms;
+  --ease-out: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --ease-state: linear;
+
+  color-scheme: dark;
+}
+
+/* ---------------------------------------------------------------------------
+   The light landing — derived for a paper ground. A scope, not a theme toggle.
+   -------------------------------------------------------------------------- */
+.gt-landing {
+  --neutral: #f6f3ee; /* Sodium paper */
+  --surface: #fefdfb;
+  --surface-raised: #efece7;
+  --border: #dedad3;
+  --on-surface: #221d19; /* Ink */
+  --secondary: #6a635d;
+
+  --primary-ink: #915114; /* Toasted amber — amber AS TEXT or a rule */
+  --primary: #f0a63c; /* amber AS A FILL, unchanged; dark text on it */
+  --primary-strong: #915114;
+  --primary-subtle: #f4e4cf;
+
+  --tertiary-strong: #b6351b;
+  --tertiary-subtle: #f7e0d8;
+  --verified: #006b5d;
+
+  --mark-registration: var(--secondary);
+  --mark-registration-active: var(--primary-ink);
+  --overlay-scrim: rgba(34, 29, 25, 0.28);
+  --shadow-float: var(--shadow-float-light);
+
+  /* glassmorphism — the landing technology marquee (wireframe 1a) */
+  --glass: rgba(254, 253, 251, 0.42);
+  --glass-cell-hover: rgba(246, 243, 238, 0.6);
+
+  color-scheme: light;
+}
+
+/* ---------------------------------------------------------------------------
+   A dark-workspace island inside the light landing — the hero's analysis
+   artifact is "what the product looks like", rendered in the real components.
+   -------------------------------------------------------------------------- */
+.gt-dark {
+  --neutral: #100e0c;
+  --surface: #191714;
+  --surface-raised: #25221f;
+  --border: #3b3733;
+  --on-surface: #e6e2dd;
+  --secondary: #a39d96;
+  --primary: #f0a63c;
+  --primary-ink: #f0a63c;
+  --primary-strong: #fcc364;
+  --primary-subtle: #3f240a;
+  --tertiary: #eb5f40;
+  --tertiary-strong: #f77b58;
+  --tertiary-subtle: #44150d;
+  --verified: #5ac0ab;
+  --mark-registration: var(--secondary);
+  --mark-registration-active: var(--primary);
+  color-scheme: dark;
+}
