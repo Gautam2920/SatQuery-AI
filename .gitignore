@@ -30,3 +30,6 @@ aiml/src/satquery_ai.egg-info/
 
 # Local dataset / notes
 BigEarthNet.txt/
+
+# AI/ML local data
+aiml/data/
