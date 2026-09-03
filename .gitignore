@@ -1,6 +1,32 @@
-backend/.venv/
+# Python
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+backend/.venv/
+venv/
+env/
+
+# Environment files
 .env
 .env.*
 !.env.example
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+.ipynb_checkpoints/
+
+# AI/ML generated data
+aiml/data/raw/
+aiml/data/processed/
+aiml/src/satquery_ai.egg-info/
+
+# Local dataset / notes
+BigEarthNet.txt/
