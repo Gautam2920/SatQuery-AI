@@ -4,7 +4,7 @@ from satquery_ai.data.scene_loader import load_scene
 
 
 def test_load_hls_scene():
-    path = Path("aiml/data/raw/Mexico_HLS.S30.T13REM.2018026T173609.v2.0_cropped.tif")
+    path = Path("data/raw/Mexico_HLS.S30.T13REM.2018026T173609.v2.0_cropped.tif")
 
     scene = load_scene(path)
 
