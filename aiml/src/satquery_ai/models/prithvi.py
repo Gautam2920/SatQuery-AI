@@ -32,3 +32,21 @@ class PrithviModel(SatelliteModel):
         output = self.model(image)
 
         return output.output
+
+    @torch.inference_mode()
+    def encode_patches(self, image: torch.Tensor) -> torch.Tensor:
+        """Pretrained ViT patch embeddings, averaged across all encoder layers.
+
+        Only the backbone carries pretrained weights, so the encoder is the sole
+        trustworthy signal this model exposes; the segmentation head built by
+        EncoderDecoderFactory is randomly initialised. Averaging every layer
+        rather than taking the last one measurably improves the spatial
+        coherence and land-cover separation of the resulting embeddings.
+        """
+        image = image.to(self.device)
+
+        layer_outputs = self.model.encoder(image)
+
+        averaged = torch.stack(layer_outputs).mean(dim=0)
+
+        return averaged[:, 1:, :].float()

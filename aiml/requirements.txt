@@ -1,4 +1,8 @@
-﻿torch==2.13.0
+torch==2.13.0
 torchvision==0.28.0
 timm==1.0.28
+terratorch==1.2.11
+rasterio==1.5.1
+numpy==2.5.2
+scikit-learn==1.9.0
 pytest==9.1.1
