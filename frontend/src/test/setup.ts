@@ -32,4 +32,14 @@ if (typeof Blob !== 'undefined' && !Blob.prototype.arrayBuffer) {
   };
 }
 
+// jsdom implements neither of these; the scene preview creates an object URL.
+if (typeof URL.createObjectURL !== 'function') {
+  URL.createObjectURL = () => `blob:satquery/${Math.random().toString(16).slice(2)}`;
+  URL.revokeObjectURL = () => {};
+}
+
+if (!window.scrollTo) {
+  Object.defineProperty(window, 'scrollTo', { writable: true, value: () => {} });
+}
+
 afterEach(() => cleanup());

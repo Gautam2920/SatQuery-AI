@@ -10,6 +10,7 @@ def upload_test_image(client, db_session):
     project = Project(
         name="Spatial Search API Test Project",
         description="Test project for spatial image search",
+        owner_id=client.user_id,
     )
 
     db_session.add(project)

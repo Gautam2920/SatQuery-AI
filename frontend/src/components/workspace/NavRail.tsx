@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/cn';
 import { RegistrationMark } from '@/components/ui/RegistrationMark';
 import { RailPrototypeMarker } from '@/components/common/PrototypeBadge';
+import { useAuth } from '@/hooks/useAuth';
 import type { LayoutMode } from '@/hooks/useLayoutMode';
 
 const DEMO_EXPORT_RUN_ID = '0f3a91';
@@ -47,6 +48,7 @@ function railItemTarget(item: RailItem, pathname: string, search: string): strin
 
 export function NavRail({ layout }: { layout: LayoutMode }) {
   const { pathname, search } = useLocation();
+  const { account, signOut } = useAuth();
   const horizontal = layout === 'column';
   const exportIsOpen = new URLSearchParams(search).get('export') === '1';
 
@@ -91,6 +93,21 @@ export function NavRail({ layout }: { layout: LayoutMode }) {
         <span className="data-sm ml-auto tracking-[0.08em] text-secondary/80">PROTOTYPE</span>
       ) : (
         <RailPrototypeMarker />
+      )}
+
+      {account && (
+        <button
+          type="button"
+          onClick={signOut}
+          title={`Sign out ${account.email}`}
+          aria-label={`Sign out ${account.email}`}
+          className={cn(
+            'label-caps tracking-[0.1em] text-secondary transition-colors duration-[var(--dur-state)] hover:text-primary',
+            horizontal ? '' : 'mt-auto',
+          )}
+        >
+          OUT
+        </button>
       )}
     </nav>
   );

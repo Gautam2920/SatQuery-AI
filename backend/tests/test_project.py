@@ -3,10 +3,11 @@ import uuid
 from backend.app.models.project import Project
 
 
-def test_create_and_read_project(db_session):
+def test_create_and_read_project(db_session, db_owner):
     project = Project(
         name="Test Project",
         description="Database integration test",
+        owner_id=db_owner.id,
     )
 
     db_session.add(project)

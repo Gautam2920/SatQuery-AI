@@ -10,6 +10,7 @@ from backend.app.db.base import Base
 
 from backend.app.models.image import Image  # noqa: F401
 from backend.app.models.project import Project  # noqa: F401
+from backend.app.models.user import User  # noqa: F401
 
 
 config = context.config
@@ -22,6 +23,16 @@ database_url = os.getenv("ALEMBIC_DATABASE_URL") or settings.database_url
 
 target_metadata = Base.metadata
 
+# PostGIS owns these; without this filter autogenerate proposes dropping them.
+POSTGIS_MANAGED_TABLES = {"spatial_ref_sys", "geography_columns", "geometry_columns"}
+
+
+def include_object(object_, name, type_, reflected, compare_to):
+    if type_ == "table" and name in POSTGIS_MANAGED_TABLES:
+        return False
+
+    return True
+
 
 def run_migrations_offline() -> None:
     """Run migrations in offline mode."""
@@ -29,6 +40,7 @@ def run_migrations_offline() -> None:
     context.configure(
         url=database_url,
         target_metadata=target_metadata,
+        include_object=include_object,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
@@ -49,6 +61,7 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
+            include_object=include_object,
         )
 
         with context.begin_transaction():

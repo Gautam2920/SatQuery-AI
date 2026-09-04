@@ -11,6 +11,7 @@ def test_upload_image_api(client, db_session):
     project = Project(
         name="API Image Test Project",
         description="Image upload API test",
+        owner_id=client.user_id,
     )
 
     db_session.add(project)
@@ -71,6 +72,7 @@ def test_upload_image_api_rejects_non_tiff(client, db_session):
     project = Project(
         name="Invalid Image Test Project",
         description="Invalid image upload test",
+        owner_id=client.user_id,
     )
 
     db_session.add(project)

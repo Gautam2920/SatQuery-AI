@@ -6,9 +6,10 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.app.api.dependencies import get_db
+from backend.app.api.dependencies import get_current_user, get_db
+from backend.app.api.ownership import require_owned_project
 from backend.app.models.image import Image
-from backend.app.models.project import Project
+from backend.app.models.user import User
 from backend.app.schemas.image import ImageResponse
 from backend.app.services.image_ingestion import ingest_raster
 from backend.app.services.raster_storage import store_raster
@@ -29,14 +30,9 @@ def upload_image(
     project_id: UUID,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
-    project = db.get(Project, project_id)
-
-    if project is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found",
-        )
+    require_owned_project(project_id, user, db)
 
     if not file.filename:
         raise HTTPException(
@@ -90,14 +86,9 @@ def upload_image(
 def list_project_images(
     project_id: UUID,
     db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
-    project = db.get(Project, project_id)
-
-    if project is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found",
-        )
+    require_owned_project(project_id, user, db)
 
     result = db.execute(
         select(Image)

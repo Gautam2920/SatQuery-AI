@@ -1,7 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import App from '@/App';
+import { signInForTest } from './session';
+import { clearStoredSession } from '@/lib/session';
 
 function renderAt(path: string) {
   return render(
@@ -12,6 +14,9 @@ function renderAt(path: string) {
 }
 
 describe('every route renders without throwing', () => {
+  // Every route below /signin is guarded, so a session comes first.
+  beforeEach(() => signInForTest());
+
   it('landing', () => {
     renderAt('/');
     expect(
@@ -22,6 +27,7 @@ describe('every route renders without throwing', () => {
   });
 
   it('sign in', () => {
+    clearStoredSession();
     renderAt('/signin');
     expect(screen.getByLabelText('Work email')).toBeInTheDocument();
     expect(screen.getByLabelText('Password')).toBeInTheDocument();

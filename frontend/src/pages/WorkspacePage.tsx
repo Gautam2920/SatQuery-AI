@@ -11,9 +11,9 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useRunPipeline } from '@/hooks/useRunPipeline';
 import { useAnalysisRun } from '@/hooks/useAnalysisRun';
 import { useLiveScenes } from '@/hooks/useLiveScenes';
+import { useScenePreview } from '@/hooks/useScenePreview';
 import { getRun } from '@/data/runs';
 import { getScene } from '@/data/scenes';
-import { scenePreviewUrl } from '@/lib/api';
 import type { Scene } from '@/data/types';
 
 /* Wireframes 1d (empty) · 1e (running) · 1f (answer + evidence) · 1g (inspector)
@@ -48,6 +48,7 @@ export function WorkspacePage() {
   const sceneParam = params.get('scene');
 
   const liveScene = liveScenes.selectedScene;
+  const scenePreviewObjectUrl = useScenePreview(liveScene?.id);
   const replayingAuthoredRun = Boolean(runParam);
   const live = Boolean(liveScene) && !replayingAuthoredRun;
 
@@ -209,7 +210,7 @@ export function WorkspacePage() {
             selectedId={selectedId}
             onSelect={openInspector}
             status={status}
-            previewUrl={live && liveScene ? scenePreviewUrl(liveScene.id) : undefined}
+            previewUrl={live ? scenePreviewObjectUrl : undefined}
             modelLabel={live ? 'prithvi-eo-v2-tiny · encoder' : undefined}
           />
         }

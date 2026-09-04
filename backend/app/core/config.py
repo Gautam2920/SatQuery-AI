@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     debug: bool = True
     database_url: str = ""
     test_database_url: str = ""
+    #: Signs access tokens. Changing it invalidates every issued token.
+    secret_key: str = ""
+    access_token_expire_minutes: int = 60 * 12
     raster_storage_dir: Path = BASE_DIR / "storage" / "rasters"
     cors_allow_origins: list[str] = [
         "http://localhost:5173",

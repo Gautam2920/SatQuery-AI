@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -11,6 +11,7 @@ from backend.app.db.base import Base
 
 if TYPE_CHECKING:
     from backend.app.models.image import Image
+    from backend.app.models.user import User
 
 
 class Project(Base):
@@ -32,6 +33,13 @@ class Project(Base):
         nullable=True,
     )
 
+    owner_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -44,6 +52,8 @@ class Project(Base):
         onupdate=func.now(),
         nullable=False,
     )
+
+    owner: Mapped["User"] = relationship(back_populates="projects")
 
     images: Mapped[list["Image"]] = relationship(
         back_populates="project",

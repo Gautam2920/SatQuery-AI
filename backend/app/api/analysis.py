@@ -3,8 +3,9 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
-from backend.app.api.dependencies import get_db
-from backend.app.models.image import Image
+from backend.app.api.dependencies import get_current_user, get_db
+from backend.app.api.ownership import require_owned_image
+from backend.app.models.user import User
 from backend.app.schemas.analysis import AnalysisRequest, AnalysisResponse
 from backend.app.services.scene_analysis import SceneAnalysisError, analyze_scene
 from backend.app.services.scene_preview import (
@@ -19,18 +20,6 @@ router = APIRouter(
 )
 
 
-def _require_image(image_id: UUID, db: Session) -> Image:
-    image = db.get(Image, image_id)
-
-    if image is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Image not found",
-        )
-
-    return image
-
-
 @router.post(
     "/analysis",
     response_model=AnalysisResponse,
@@ -40,8 +29,9 @@ def run_scene_analysis(
     image_id: UUID,
     analysis_request: AnalysisRequest,
     db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
-    image = _require_image(image_id, db)
+    image = require_owned_image(image_id, user, db)
 
     try:
         return analyze_scene(
@@ -60,13 +50,14 @@ def run_scene_analysis(
 def get_scene_preview(
     image_id: UUID,
     db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
     """True-colour PNG of exactly the tile the analysis runs on.
 
     The evidence boxes are expressed as percentages of that tile, so the canvas
     must show the same extent for them to line up.
     """
-    image = _require_image(image_id, db)
+    image = require_owned_image(image_id, user, db)
 
     try:
         png_bytes = render_analysed_tile_png(image)

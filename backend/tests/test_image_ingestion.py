@@ -7,10 +7,11 @@ from backend.app.services.image_ingestion import ingest_raster
 FIXTURE = Path(__file__).parent / "fixtures" / "sample_satellite.tif"
 
 
-def test_ingest_raster(db_session):
+def test_ingest_raster(db_session, db_owner):
     project = Project(
         name="Ingestion Test Project",
         description="Raster ingestion service test",
+        owner_id=db_owner.id,
     )
 
     db_session.add(project)

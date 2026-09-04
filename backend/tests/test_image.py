@@ -16,12 +16,13 @@ from backend.app.services.spatial import find_images_containing_point
 FIXTURE = Path(__file__).parent / "fixtures" / "sample_satellite.tif"
 
 
-def test_create_and_read_image(db_session):
+def test_create_and_read_image(db_session, db_owner):
     metadata = extract_raster_metadata(FIXTURE)
 
     project = Project(
         name="Image Test Project",
         description="Database integration test for images",
+        owner_id=db_owner.id,
     )
 
     db_session.add(project)
@@ -63,7 +64,7 @@ def test_create_and_read_image(db_session):
     assert image.bounds_top == 28.0
 
 
-def test_persist_image_footprint(db_session):
+def test_persist_image_footprint(db_session, db_owner):
     metadata = extract_raster_metadata(FIXTURE)
     footprint = extract_raster_footprint(FIXTURE)
 
@@ -74,6 +75,7 @@ def test_persist_image_footprint(db_session):
     project = Project(
         name="Footprint Persistence Test Project",
         description="Database integration test for image footprints",
+        owner_id=db_owner.id,
     )
 
     db_session.add(project)
@@ -123,13 +125,14 @@ def test_persist_image_footprint(db_session):
     assert stored_validity is True
 
 
-def test_find_images_containing_point(db_session):
+def test_find_images_containing_point(db_session, db_owner):
     metadata = extract_raster_metadata(FIXTURE)
     footprint = extract_raster_footprint(FIXTURE)
 
     project = Project(
         name="Spatial Query Test Project",
         description="Database integration test for spatial queries",
+        owner_id=db_owner.id,
     )
 
     db_session.add(project)
@@ -162,6 +165,7 @@ def test_find_images_containing_point(db_session):
         db_session=db_session,
         longitude=77.05,
         latitude=27.95,
+        owner_id=db_owner.id,
     )
 
     assert len(matching_images) == 1
@@ -170,6 +174,7 @@ def test_find_images_containing_point(db_session):
 
 def test_find_images_containing_point_returns_empty_for_outside_point(
     db_session,
+    db_owner,
 ):
     metadata = extract_raster_metadata(FIXTURE)
     footprint = extract_raster_footprint(FIXTURE)
@@ -177,6 +182,7 @@ def test_find_images_containing_point_returns_empty_for_outside_point(
     project = Project(
         name="Spatial Query Outside Test Project",
         description="Database integration test for outside spatial queries",
+        owner_id=db_owner.id,
     )
 
     db_session.add(project)
@@ -209,6 +215,7 @@ def test_find_images_containing_point_returns_empty_for_outside_point(
         db_session=db_session,
         longitude=77.5,
         latitude=27.95,
+        owner_id=db_owner.id,
     )
 
     assert matching_images == []

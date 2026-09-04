@@ -1,39 +1,117 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
 import { RegistrationMark } from '@/components/ui/RegistrationMark';
 import { TextInput } from '@/components/ui/TextInput';
-import { PrototypeBadge } from '@/components/common/PrototypeBadge';
+import { describeAuthError, useAuth } from '@/hooks/useAuth';
 
-const WORKSPACES = [
-  { name: 'Delta Flood Program', meta: '14 scenes · 62 runs · analyst', selected: true },
-  { name: 'Crop Insurance — EU', meta: '8 scenes · 21 runs · viewer', selected: false },
-];
+const PASSWORD_MIN_LENGTH = 8;
 
-/* Wireframe 1b — sign in, SSO, workspace/org pick. Mock form: no backend, no
-   data is submitted. Role determines whether a run can be re-executed or only
-   read; every export carries the signing user and the run id. */
+type AuthMode = 'signin' | 'register';
+
+interface FieldErrors {
+  email?: string;
+  password?: string;
+}
+
+/** Mirrors the backend's own rules so the obvious mistakes are caught without a
+ *  round trip. The backend remains the authority. */
+function validate(email: string, password: string, mode: AuthMode): FieldErrors {
+  const errors: FieldErrors = {};
+
+  if (!email.trim()) errors.email = 'Enter your email address.';
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
+    errors.email = 'That does not look like an email address.';
+
+  if (!password) errors.password = 'Enter your password.';
+  else if (mode === 'register' && password.length < PASSWORD_MIN_LENGTH)
+    errors.password = `Use at least ${PASSWORD_MIN_LENGTH} characters.`;
+
+  return errors;
+}
+
 export function AuthPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { status, signIn, signUp } = useAuth();
+
+  const [mode, setMode] = useState<AuthMode>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const redirectTo = (location.state as { from?: string } | null)?.from ?? '/library';
+
+  useEffect(() => {
+    if (status === 'authenticated') navigate(redirectTo, { replace: true });
+  }, [status, navigate, redirectTo]);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const errors = validate(email, password, mode);
+    setFieldErrors(errors);
+    setSubmitError(null);
+
+    if (Object.keys(errors).length > 0) return;
+
+    setSubmitting(true);
+
+    try {
+      if (mode === 'register') await signUp(email.trim(), password);
+      else await signIn(email.trim(), password);
+
+      navigate(redirectTo, { replace: true });
+    } catch (cause) {
+      setSubmitError(describeAuthError(cause));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const switchMode = (next: AuthMode) => {
+    setMode(next);
+    setFieldErrors({});
+    setSubmitError(null);
+  };
 
   return (
     <div className="gt-landing grid min-h-full grid-cols-2 bg-neutral text-on-surface max-[760px]:grid-cols-1">
       <div className="flex flex-col items-start gap-lg border-r border-border p-[40px_32px] max-[760px]:border-b max-[760px]:border-r-0">
-        <span className="flex items-center gap-[10px]">
+        <Link to="/" className="flex items-center gap-[10px]">
           <RegistrationMark size={18} color="var(--primary-ink)" />
           <span className="label-caps text-primary-ink">SatQuery AI</span>
-        </span>
-        <h1 className="headline-md">Sign in</h1>
+        </Link>
 
-        <form
-          className="flex w-[320px] max-w-full flex-col gap-md"
-          onSubmit={(e) => {
-            e.preventDefault();
-            navigate('/library');
-          }}
+        <h1 className="headline-md">{mode === 'signin' ? 'Sign in' : 'Create an account'}</h1>
+
+        <div
+          role="tablist"
+          aria-label="Authentication mode"
+          className="flex w-[320px] max-w-full gap-0 rounded-control border border-border p-[2px]"
         >
+          {(['signin', 'register'] as const).map((option) => (
+            <button
+              key={option}
+              type="button"
+              role="tab"
+              aria-selected={mode === option}
+              onClick={() => switchMode(option)}
+              className={`label-caps flex-1 rounded-control py-[7px] transition-colors duration-[var(--dur-state)] ${
+                mode === option
+                  ? 'bg-surface-raised text-primary-ink'
+                  : 'text-secondary hover:text-primary-ink'
+              }`}
+            >
+              {option === 'signin' ? 'Sign in' : 'Register'}
+            </button>
+          ))}
+        </div>
+
+        <form className="flex w-[320px] max-w-full flex-col gap-md" onSubmit={handleSubmit} noValidate>
           <TextInput
             label="Work email"
             type="email"
@@ -41,61 +119,81 @@ export function AuthPage() {
             onChange={setEmail}
             placeholder="you@org.example"
             autoComplete="username"
+            error={fieldErrors.email}
           />
           <TextInput
             label="Password"
             type="password"
             value={password}
             onChange={setPassword}
-            autoComplete="current-password"
+            autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+            error={fieldErrors.password}
+            hint={
+              mode === 'register' && !fieldErrors.password
+                ? `At least ${PASSWORD_MIN_LENGTH} characters.`
+                : undefined
+            }
           />
-          <Button type="submit" full>
-            Sign in
+
+          {submitError && (
+            <div
+              role="alert"
+              className="body-sm flex items-start gap-xs border border-tertiary bg-[var(--tertiary-subtle)] p-sm text-tertiary-strong"
+            >
+              <Icon name="alert" size={13} />
+              <span>{submitError}</span>
+            </div>
+          )}
+
+          <Button type="submit" full disabled={submitting}>
+            {submitting
+              ? mode === 'signin'
+                ? 'Signing in…'
+                : 'Creating account…'
+              : mode === 'signin'
+                ? 'Sign in'
+                : 'Create account'}
           </Button>
         </form>
 
-        <div className="flex w-[320px] max-w-full items-center gap-[10px] py-xs">
-          <span className="h-px flex-1 bg-border" />
-          <span className="data-sm text-secondary">or</span>
-          <span className="h-px flex-1 bg-border" />
-        </div>
-
-        <button
-          type="button"
-          onClick={() => navigate('/library')}
-          className="label-caps flex h-[38px] w-[320px] max-w-full items-center rounded-control border border-border px-md text-on-surface transition-colors duration-[var(--dur-state)] hover:border-primary-ink hover:text-primary-ink"
-        >
-          Continue with SAML SSO
-        </button>
-        <span className="body-sm text-secondary">Reset password · Request access</span>
+        <span className="body-sm text-secondary">
+          {mode === 'signin' ? (
+            <>
+              No account yet?{' '}
+              <button
+                type="button"
+                onClick={() => switchMode('register')}
+                className="text-primary-ink underline"
+              >
+                Register
+              </button>
+            </>
+          ) : (
+            <>
+              Already registered?{' '}
+              <button
+                type="button"
+                onClick={() => switchMode('signin')}
+                className="text-primary-ink underline"
+              >
+                Sign in
+              </button>
+            </>
+          )}
+        </span>
       </div>
 
       <div className="flex flex-col items-start gap-lg p-[40px_32px]">
-        <span className="label-caps text-secondary">After sign-in — pick a workspace</span>
-        <div className="flex w-full max-w-[360px] flex-col gap-sm">
-          {WORKSPACES.map((w) => (
-            <Link
-              key={w.name}
-              to="/library"
-              className={`block rounded-control border p-[10px_12px] transition-colors duration-[var(--dur-state)] hover:border-primary-ink ${
-                w.selected ? 'border-primary-ink bg-surface-raised' : 'border-border'
-              }`}
-            >
-              <div className="title-sm text-[length:var(--text-body-sm-size)]">{w.name}</div>
-              <div className="data-sm text-secondary">{w.meta}</div>
-            </Link>
-          ))}
-          <div className="label-caps rounded-control border border-dashed border-border p-[10px_12px] text-secondary">
-            Create workspace
-          </div>
-        </div>
+        <span className="label-caps text-secondary">What an account gives you</span>
+        <p className="body-md max-w-[46ch]">
+          Scenes you upload and every run you execute belong to your account alone. Areas,
+          coordinates and confidence are measured from the raster, never authored.
+        </p>
         <p className="body-sm max-w-[52ch] text-secondary">
-          Role determines whether a run can be re-executed or only read. Every export carries the
-          signing user and the run id.
+          Every export carries the signing user and the run id. Prototype build — not for
+          operational decisions.
         </p>
       </div>
-
-      <PrototypeBadge />
     </div>
   );
 }

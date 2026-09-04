@@ -4,6 +4,14 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import App from '@/App';
 import { ApiError, runAnalysis } from '@/lib/api';
+import { signInForTest } from './session';
+
+const ACCOUNT = {
+  id: '00000000-0000-0000-0000-000000000001',
+  email: 'analyst@example.com',
+  is_verified: true,
+  created_at: '2026-01-01T00:00:00Z',
+};
 
 const PROJECT = { id: 'p-1', name: 'SatQuery workspace' };
 
@@ -75,6 +83,14 @@ function jsonResponse(body: unknown) {
   return { ok: true, status: 200, json: () => Promise.resolve(body) } as Response;
 }
 
+function previewResponse() {
+  return Promise.resolve({
+    ok: true,
+    status: 200,
+    blob: () => Promise.resolve(new Blob([new Uint8Array([137, 80, 78, 71])])),
+  } as unknown as Response);
+}
+
 function requestUrl(input: RequestInfo | URL): string {
   if (typeof input === 'string') return input;
   if (input instanceof URL) return input.href;
@@ -85,6 +101,8 @@ function mockBackend(analysis: unknown = ANALYSIS, images = [SCENE_IMAGE]) {
   return vi.fn((input: RequestInfo | URL) => {
     const url = requestUrl(input);
 
+    if (url.endsWith('/auth/me')) return jsonResponse(ACCOUNT);
+    if (url.endsWith('/preview')) return previewResponse();
     if (url.endsWith('/projects')) return jsonResponse([PROJECT]);
     if (url.endsWith(`/projects/${PROJECT.id}/images`)) return jsonResponse(images);
     if (url.endsWith('/analysis')) return jsonResponse(analysis);
@@ -94,6 +112,8 @@ function mockBackend(analysis: unknown = ANALYSIS, images = [SCENE_IMAGE]) {
 }
 
 function renderWorkspace() {
+  signInForTest();
+
   return render(
     <MemoryRouter initialEntries={['/workspace']}>
       <App />
@@ -119,7 +139,13 @@ describe('live workspace', () => {
 
     const preview = await screen.findByAltText(/True-colour render of the analysed tile/);
 
-    expect(preview).toHaveAttribute('src', expect.stringContaining('/images/img-1/preview'));
+    // The endpoint needs a bearer token, which an <img> cannot send, so the PNG
+    // is fetched and handed to the canvas as an object URL.
+    expect(preview).toHaveAttribute('src', expect.stringContaining('blob:'));
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/images/img-1/preview'),
+      expect.objectContaining({ headers: expect.anything() }),
+    );
   });
 
   it('runs a real analysis and renders the measured evidence it returns', async () => {

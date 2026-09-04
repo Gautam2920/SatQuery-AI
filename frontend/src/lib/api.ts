@@ -8,6 +8,12 @@
    ========================================================================== */
 
 import type { AnswerToken, EvidenceRegion, ExecutionStageData, Scene } from '@/data/types';
+import {
+  clearStoredSession,
+  readStoredToken,
+  type AuthenticatedAccount,
+  type Session,
+} from '@/lib/session';
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:8000').replace(
   /\/$/,
@@ -49,16 +55,33 @@ export interface AnalysisResult {
 
 export class ApiError extends Error {}
 
+/** Thrown when the backend rejects the session; the UI signs the user out. */
+export class UnauthorizedError extends ApiError {}
+
+function withAuthorization(init: RequestInit | undefined): RequestInit {
+  const token = readStoredToken();
+  const headers = new Headers(init?.headers);
+
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+
+  return { ...init, headers };
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
 
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, init);
+    response = await fetch(`${API_BASE_URL}${path}`, withAuthorization(init));
   } catch {
     throw new ApiError(
       `Cannot reach the SatQuery backend at ${API_BASE_URL}. Start it with ` +
         '`uvicorn backend.app.main:app`.',
     );
+  }
+
+  if (response.status === 401) {
+    clearStoredSession();
+    throw new UnauthorizedError('Your session has expired. Sign in again.');
   }
 
   if (!response.ok) {
@@ -84,8 +107,40 @@ async function readErrorDetail(response: Response): Promise<string> {
   return `${response.status} ${response.statusText}`;
 }
 
-export function scenePreviewUrl(imageId: string): string {
-  return `${API_BASE_URL}/images/${imageId}/preview`;
+export async function fetchScenePreview(imageId: string): Promise<Blob> {
+  const response = await fetch(
+    `${API_BASE_URL}/images/${imageId}/preview`,
+    withAuthorization(undefined),
+  );
+
+  if (response.status === 401) {
+    clearStoredSession();
+    throw new UnauthorizedError('Your session has expired. Sign in again.');
+  }
+
+  if (!response.ok) throw new ApiError(await readErrorDetail(response));
+
+  return response.blob();
+}
+
+export async function register(email: string, password: string): Promise<Session> {
+  return request<Session>('/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export async function login(email: string, password: string): Promise<Session> {
+  return request<Session>('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export async function fetchCurrentAccount(): Promise<AuthenticatedAccount> {
+  return request<AuthenticatedAccount>('/auth/me');
 }
 
 export async function listProjects(): Promise<ProjectSummary[]> {
