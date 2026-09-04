@@ -189,6 +189,7 @@ describe('live workspace', () => {
       vi.fn((input: RequestInfo | URL) => {
         const url = requestUrl(input);
 
+        if (url.endsWith('/auth/me')) return jsonResponse(ACCOUNT);
         if (url.endsWith('/projects')) return jsonResponse([PROJECT]);
         if (url.endsWith(`/projects/${PROJECT.id}/images`)) return jsonResponse([SCENE_IMAGE]);
 
@@ -217,13 +218,30 @@ describe('backend unavailable', () => {
   it('reports the outage and leaves the workspace empty', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(() => Promise.reject(new TypeError('fetch failed'))),
+      vi.fn((input: RequestInfo | URL) => {
+        if (requestUrl(input).endsWith('/auth/me')) return jsonResponse(ACCOUNT);
+
+        return Promise.reject(new TypeError('fetch failed'));
+      }),
     );
 
     renderWorkspace();
 
     expect(await screen.findByText('backend unavailable')).toBeInTheDocument();
     expect(screen.getByText(/No run yet/)).toBeInTheDocument();
+  });
+
+  it('sends the visitor to sign in when the backend cannot confirm the session', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.reject(new TypeError('fetch failed'))),
+    );
+
+    renderWorkspace();
+
+    // A token that cannot be checked is not a session, so no guarded page renders.
+    expect(await screen.findByLabelText('Work email')).toBeInTheDocument();
+    expect(screen.queryByText(/No run yet/)).not.toBeInTheDocument();
   });
 
   it('keeps a scene the model cannot consume but marks it preview only', async () => {

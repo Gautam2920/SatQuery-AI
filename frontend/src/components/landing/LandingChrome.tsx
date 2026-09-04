@@ -4,6 +4,7 @@ import { cn } from '@/lib/cn';
 import { LinkButton } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { RegistrationMark } from '@/components/ui/RegistrationMark';
+import { useAuth } from '@/hooks/useAuth';
 
 const SECTION_LINKS = [
   { id: 'technology', label: 'Technology' },
@@ -11,6 +12,26 @@ const SECTION_LINKS = [
   { id: 'how', label: 'How it works' },
   { id: 'capabilities', label: 'Capabilities' },
 ];
+
+/** A visitor with a confirmed session has no reason to be sent to a sign-in
+ *  form, so the same control carries them into the application instead. */
+function ApplicationEntryButton() {
+  const { status } = useAuth();
+
+  if (status === 'authenticated') {
+    return (
+      <LinkButton to="/library" size="sm" variant="secondary">
+        Open SatQuery
+      </LinkButton>
+    );
+  }
+
+  return (
+    <LinkButton to="/signin" size="sm" variant="secondary">
+      Sign in
+    </LinkButton>
+  );
+}
 
 /** Marks the section the reader is actually in, so the nav reports position
  *  instead of being four inert links. */
@@ -122,15 +143,11 @@ export function LandingNav() {
               </a>
             );
           })}
-          <LinkButton to="/signin" size="sm" variant="secondary">
-            Sign in
-          </LinkButton>
+          <ApplicationEntryButton />
         </span>
 
         <span className="ml-auto hidden items-center gap-sm max-[720px]:flex">
-          <LinkButton to="/signin" size="sm" variant="secondary">
-            Sign in
-          </LinkButton>
+          <ApplicationEntryButton />
           <button
             type="button"
             aria-label={menuOpen ? 'Close menu' : 'Open menu'}

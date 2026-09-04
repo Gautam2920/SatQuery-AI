@@ -53,6 +53,33 @@ describe('protected routes', () => {
     expect(await screen.findByLabelText('Work email')).toBeInTheDocument();
   });
 
+  it('does not authenticate from a cached account alone', async () => {
+    signInForTest();
+    // The backend never answers, so the token is never confirmed.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.reject(new TypeError('fetch failed'))),
+    );
+
+    renderAt('/workspace');
+
+    expect(await screen.findByLabelText('Work email')).toBeInTheDocument();
+    expect(screen.queryByText(/No run yet/)).not.toBeInTheDocument();
+  });
+
+  it('discards a token the backend rejects', async () => {
+    signInForTest();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => jsonResponse({ detail: 'Not authenticated' }, 401)),
+    );
+
+    renderAt('/workspace');
+
+    expect(await screen.findByLabelText('Work email')).toBeInTheDocument();
+    expect(readStoredToken()).toBeNull();
+  });
+
   it('lets a signed-in visitor through to the workspace', async () => {
     signInForTest();
     vi.stubGlobal(
@@ -67,6 +94,43 @@ describe('protected routes', () => {
     renderAt('/workspace');
 
     expect(await screen.findByText(/No run yet/)).toBeInTheDocument();
+  });
+});
+
+describe('the sign-in page', () => {
+  it('does not redirect on a stored token until the backend confirms it', async () => {
+    signInForTest();
+
+    let confirmAccount: ((value: Response) => void) | null = null;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            confirmAccount = resolve;
+          }),
+      ),
+    );
+
+    renderAt('/signin');
+
+    expect(await screen.findByText(/Confirming your session/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Work email')).not.toBeInTheDocument();
+
+    confirmAccount!({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(ACCOUNT),
+    } as Response);
+
+    expect(await screen.findByText('Scene library')).toBeInTheDocument();
+  });
+
+  it('explains where an anonymous visitor was headed', async () => {
+    renderAt('/workspace');
+
+    expect(await screen.findByText(/Sign in to continue/i)).toBeInTheDocument();
+    expect(screen.getByText('/workspace')).toBeInTheDocument();
   });
 });
 

@@ -26,16 +26,15 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+/* A stored token is a claim, not a session. The cached account is restored only
+   so the app can paint the signed-in chrome the instant the backend confirms the
+   token; it never decides whether the visitor is authenticated. */
 function restoreCachedSession(): { status: AuthStatus; account: AuthenticatedAccount | null } {
   const token = readStoredToken();
 
   if (!token) return { status: 'anonymous', account: null };
 
-  const account = readStoredAccount();
-
-  return account
-    ? { status: 'authenticated', account }
-    : { status: 'restoring', account: null };
+  return { status: 'restoring', account: readStoredAccount() };
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -50,9 +49,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setStatus('anonymous');
   }, []);
 
-  // A stored token may have been revoked or expired while the tab was closed.
-  // A rejected token ends the session; an unreachable backend must not, or an
-  // outage would sign everyone out.
+  // A stored token may have been revoked or expired while the tab was closed, so
+  // the session is only granted once the backend confirms it. A rejected token is
+  // discarded; an unreachable backend leaves the token in place so the session
+  // returns when the backend does, but access is still withheld until then.
   useEffect(() => {
     if (status === 'anonymous') return;
 
@@ -71,8 +71,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .catch((cause) => {
         if (cancelled) return;
 
-        if (cause instanceof UnauthorizedError) signOut();
-        else if (status === 'restoring') setStatus('anonymous');
+        if (cause instanceof UnauthorizedError) {
+          signOut();
+          return;
+        }
+
+        setAccount(null);
+        setStatus('anonymous');
       });
 
     return () => {

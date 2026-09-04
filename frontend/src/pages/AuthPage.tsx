@@ -43,7 +43,8 @@ export function AuthPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const redirectTo = (location.state as { from?: string } | null)?.from ?? '/library';
+  const redirectedFrom = (location.state as { from?: string } | null)?.from ?? null;
+  const redirectTo = redirectedFrom ?? '/library';
 
   useEffect(() => {
     if (status === 'authenticated') navigate(redirectTo, { replace: true });
@@ -78,6 +79,14 @@ export function AuthPage() {
     setSubmitError(null);
   };
 
+  if (status === 'restoring') {
+    return (
+      <div className="gt-landing label-caps flex min-h-full items-center justify-center bg-neutral p-xl text-secondary">
+        Confirming your session…
+      </div>
+    );
+  }
+
   return (
     <div className="gt-landing grid min-h-full grid-cols-2 bg-neutral text-on-surface max-[760px]:grid-cols-1">
       <div className="flex flex-col items-start gap-lg border-r border-border p-[40px_32px] max-[760px]:border-b max-[760px]:border-r-0">
@@ -110,6 +119,13 @@ export function AuthPage() {
             </button>
           ))}
         </div>
+
+        {redirectedFrom && (
+          <p className="body-sm w-[320px] max-w-full text-secondary">
+            Sign in to continue. You will be taken to{' '}
+            <span className="text-primary-ink">{redirectedFrom}</span>.
+          </p>
+        )}
 
         <form
           className="flex w-[320px] max-w-full flex-col gap-md"
