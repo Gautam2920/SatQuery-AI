@@ -1,9 +1,13 @@
 from pathlib import Path
 
 import rasterio
+from rasterio.warp import transform_bounds
 
 from backend.app.geospatial.footprint import build_footprint
 from backend.app.schemas.raster import RasterBounds, RasterMetadata
+
+
+FOOTPRINT_CRS = "EPSG:4326"
 
 
 def _normalize_crs(crs) -> str | None:
@@ -53,6 +57,25 @@ def extract_raster_metadata(file_path: str | Path) -> RasterMetadata:
 
 
 def extract_raster_footprint(file_path: str | Path):
+    """Footprint polygon in EPSG:4326, the SRID the images table stores.
+
+    Raster bounds are in the raster's own CRS, so a projected scene must be
+    reprojected before it is stored or any spatial query against it is wrong.
+    """
     metadata = extract_raster_metadata(file_path)
 
-    return build_footprint(metadata.bounds)
+    if metadata.crs is None or metadata.crs == FOOTPRINT_CRS:
+        return build_footprint(metadata.bounds)
+
+    left, bottom, right, top = transform_bounds(
+        metadata.crs,
+        FOOTPRINT_CRS,
+        metadata.bounds.left,
+        metadata.bounds.bottom,
+        metadata.bounds.right,
+        metadata.bounds.top,
+    )
+
+    return build_footprint(
+        RasterBounds(left=left, bottom=bottom, right=right, top=top)
+    )
