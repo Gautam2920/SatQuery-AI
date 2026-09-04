@@ -36,7 +36,6 @@ export function WorkspacePage() {
   const [query, setQuery] = useState('Where is the vegetation?');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [inspectorId, setInspectorId] = useState<string | null>(null);
-  const [exportOpen, setExportOpen] = useState(false);
 
   // a run started from the UI clears the URL params itself; the deep-link effect
   // must not then treat the now-empty params as "return to idle".
@@ -45,6 +44,7 @@ export function WorkspacePage() {
   const runParam = params.get('run');
   const qParam = params.get('q');
   const exportParam = params.get('export');
+  const exportOpen = exportParam === '1';
   const sceneParam = params.get('scene');
 
   const liveScene = liveScenes.selectedScene;
@@ -91,7 +91,6 @@ export function WorkspacePage() {
       mockPipeline.hydrate(r);
       setQuery(r.query);
       setSelectedId(r.regions?.[0]?.id ?? null);
-      setExportOpen(Boolean(exportParam));
       return;
     }
     if (qParam) {
@@ -100,7 +99,9 @@ export function WorkspacePage() {
     }
     mockPipeline.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runParam, qParam, exportParam, navigate]);
+    // `exportParam` is deliberately not a dependency: opening the export panel
+    // must not re-enter this effect and reset a run that is already on screen.
+  }, [runParam, qParam, navigate]);
 
 
   // first region becomes the active selection when an answer settles
@@ -114,7 +115,6 @@ export function WorkspacePage() {
 
       setQuery(nextQuery);
       setInspectorId(null);
-      setExportOpen(false);
       setSelectedId(null);
 
       if (runParam || qParam || exportParam) {
@@ -146,6 +146,21 @@ export function WorkspacePage() {
     autoRanQuery.current = qParam;
     handleRun(qParam);
   }, [qParam, runParam, liveScenes.status, handleRun]);
+
+  const setExportOpen = useCallback(
+    (open: boolean) => {
+      setParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          if (open) next.set('export', '1');
+          else next.delete('export');
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setParams],
+  );
 
   const openInspector = useCallback((id: string) => {
     setSelectedId(id);
