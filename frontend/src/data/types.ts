@@ -8,6 +8,13 @@
 
 export type Provenance = 'interpreted' | 'measured' | 'change';
 
+/** A GeoJSON geometry in EPSG:4326 as returned by the backend. Present only on
+ *  live runs — the authored demo runs carry no real coordinates. */
+export interface GeoJsonGeometry {
+  type: 'Polygon' | 'MultiPolygon';
+  coordinates: number[][][] | number[][][][];
+}
+
 export type StageState = 'pending' | 'running' | 'done' | 'failed';
 
 /** One node of the agentic execution trace. Every stage is individually
@@ -33,6 +40,8 @@ export interface EvidenceRegion {
   centroid: string;
   bands: string;
   provenance: Provenance;
+  /** measured outline in EPSG:4326; only live runs have one */
+  geometry?: GeoJsonGeometry;
   /** true = flagged low-confidence / needs review (paired with icon + word) */
   alert?: boolean;
   /** placement of the registration-bracket box on the canvas, as CSS % offsets */

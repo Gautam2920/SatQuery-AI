@@ -131,6 +131,7 @@ def _ground_regions(
                     ),
                     provenance="measured",
                     box=_pixel_box(measured.pixel_bounds, segmentation.tile_size),
+                    geometry=measured.boundary_wgs84,
                 ),
                 area_square_metres=measured.area_square_metres,
                 land_cover=scene_region.land_cover,

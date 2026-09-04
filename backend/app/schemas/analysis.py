@@ -39,6 +39,9 @@ class EvidenceRegion(BaseModel):
     bands: str
     provenance: Literal["interpreted", "measured", "change"]
     box: RegionBox
+    #: Region outline as a GeoJSON geometry in EPSG:4326, so an exported
+    #: evidence bundle carries real coordinates rather than canvas percentages.
+    geometry: dict
 
     model_config = {"populate_by_name": True}
 

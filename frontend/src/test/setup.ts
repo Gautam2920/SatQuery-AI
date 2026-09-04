@@ -19,4 +19,17 @@ if (!window.matchMedia) {
   });
 }
 
+// jsdom's Blob implements neither arrayBuffer() nor text(), both of which every
+// supported browser has. The export module reads its own output through them.
+if (typeof Blob !== 'undefined' && !Blob.prototype.arrayBuffer) {
+  Blob.prototype.arrayBuffer = function readAsArrayBuffer(this: Blob): Promise<ArrayBuffer> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as ArrayBuffer);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsArrayBuffer(this);
+    });
+  };
+}
+
 afterEach(() => cleanup());

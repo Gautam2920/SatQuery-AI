@@ -13,8 +13,8 @@ import rasterio
 from pyproj import Transformer
 from rasterio.features import shapes
 from scipy import ndimage
-from shapely.geometry import shape
-from shapely.ops import unary_union
+from shapely.geometry import mapping, shape
+from shapely.ops import transform as transform_geometry, unary_union
 
 
 WGS84 = "EPSG:4326"
@@ -31,6 +31,10 @@ class MeasuredRegion:
     centroid_longitude: float
     centroid_latitude: float
     pixel_bounds: tuple[int, int, int, int]
+    #: GeoJSON geometry of the region outline in EPSG:4326, for export. The
+    #: outline is simplified by half a pixel to keep the payload small; the
+    #: area and perimeter above are measured on the full-resolution geometry.
+    boundary_wgs84: dict
 
 
 def _pixel_bounds(component_mask: np.ndarray) -> tuple[int, int, int, int]:
@@ -95,6 +99,13 @@ def measure_labelled_regions(
             geometry = _component_geometry(component_mask, transform)
             centroid = geometry.centroid
             longitude, latitude = to_wgs84.transform(centroid.x, centroid.y)
+            outline = geometry.simplify(abs(transform.a) / 2, preserve_topology=True)
+            boundary_wgs84 = mapping(
+                transform_geometry(
+                    lambda xs, ys: to_wgs84.transform(xs, ys),
+                    outline,
+                )
+            )
 
             measured_regions.append(
                 MeasuredRegion(
@@ -105,6 +116,7 @@ def measure_labelled_regions(
                     centroid_longitude=float(longitude),
                     centroid_latitude=float(latitude),
                     pixel_bounds=_pixel_bounds(component_mask),
+                    boundary_wgs84=boundary_wgs84,
                 )
             )
 
