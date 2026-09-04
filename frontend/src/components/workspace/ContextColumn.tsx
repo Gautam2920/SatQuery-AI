@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/Button';
 import { Divider } from '@/components/ui/Divider';
@@ -71,6 +71,7 @@ export function ContextColumn({
   onChangeScene,
   run,
   note,
+  scenePanel,
 }: {
   status: PipelineStatus;
   scene: Scene;
@@ -81,6 +82,8 @@ export function ContextColumn({
   onChangeScene: () => void;
   run: Run | null;
   note: string | null;
+  /** live scene controls; replaces the static scene metadata block when present */
+  scenePanel?: ReactNode;
 }) {
   const elapsed = useElapsed(status === 'running', run?.id ?? 'none');
 
@@ -132,18 +135,22 @@ export function ContextColumn({
             ))}
           </div>
           <Divider />
-          <span className="label-caps text-secondary">Scene</span>
-          <MetaValue label="Id" value={scene.id} />
-          <MetaValue label="Pass" value={scene.pass} />
-          <MetaValue label="GSD" value={scene.gsd} tone="measured" />
-          <MetaValue
-            label="CRS"
-            value={
-              <Tooltip content="Universal Transverse Mercator zone 31N, WGS 84 datum.">
-                {scene.crs}
-              </Tooltip>
-            }
-          />
+          {scenePanel ?? (
+            <>
+              <span className="label-caps text-secondary">Scene</span>
+              <MetaValue label="Id" value={scene.id} />
+              <MetaValue label="Pass" value={scene.pass} />
+              <MetaValue label="GSD" value={scene.gsd} tone="measured" />
+              <MetaValue
+                label="CRS"
+                value={
+                  <Tooltip content="Universal Transverse Mercator zone 31N, WGS 84 datum.">
+                    {scene.crs}
+                  </Tooltip>
+                }
+              />
+            </>
+          )}
           <Divider />
           <span className="label-caps text-secondary">Layers</span>
           <LayerToggles
@@ -169,12 +176,16 @@ export function ContextColumn({
               <Divider />
             </>
           )}
-          <span className="label-caps text-secondary">Scene</span>
-          <MetaValue label="Id" value={scene.id} />
-          <MetaValue label="CRS" value={scene.crs} />
-          <Button size="sm" variant="secondary" onClick={onChangeScene}>
-            Change scene
-          </Button>
+          {scenePanel ?? (
+            <>
+              <span className="label-caps text-secondary">Scene</span>
+              <MetaValue label="Id" value={scene.id} />
+              <MetaValue label="CRS" value={scene.crs} />
+              <Button size="sm" variant="secondary" onClick={onChangeScene}>
+                Change scene
+              </Button>
+            </>
+          )}
 
           {status === 'idle' && (
             <>

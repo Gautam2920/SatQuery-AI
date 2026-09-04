@@ -13,12 +13,17 @@ export function ImageryCanvas({
   selectedId,
   onSelect,
   status,
+  previewUrl,
+  modelLabel,
 }: {
   scene: Scene;
   regions: EvidenceRegion[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   status: PipelineStatus;
+  /** rendered true-colour PNG of exactly the tile the backend analysed */
+  previewUrl?: string;
+  modelLabel?: string;
 }) {
   const running = status === 'running';
   const markColor = running ? 'var(--primary)' : 'var(--secondary)';
@@ -28,7 +33,9 @@ export function ImageryCanvas({
   // shown only while running / halted — in the answer state the drawn region
   // boxes and the provenance chips already say what the canvas holds.
   const note = running
-    ? 'computing inundation mask…'
+    ? previewUrl
+      ? 'running Prithvi encoder on the backend…'
+      : 'computing inundation mask…'
     : status === 'failure'
       ? 'SCENE · chain halted before a mask was drawn'
       : null;
@@ -57,10 +64,18 @@ export function ImageryCanvas({
       </div>
 
       <div className="relative min-h-[280px] flex-1 bg-neutral">
-        <ImageSlot
-          label="SCENE · placeholder imagery, inset flush — drop a GeoTIFF / COG"
-          hideLabel={status !== 'idle'}
-        />
+        {previewUrl ? (
+          <img
+            src={previewUrl}
+            alt={`True-colour render of the analysed tile of ${scene.id}`}
+            className="absolute inset-0 h-full w-full object-contain"
+          />
+        ) : (
+          <ImageSlot
+            label="SCENE · placeholder imagery, inset flush — drop a GeoTIFF / COG"
+            hideLabel={status !== 'idle'}
+          />
+        )}
 
         {/* corner registration brackets */}
         <span className={CORNER} style={{ top: 10, left: 10, ...b(['borderTop', 'borderLeft']) }} />
@@ -121,9 +136,11 @@ export function ImageryCanvas({
         {status === 'answer' && regions.length > 0 && (
           <div className="absolute bottom-[14px] right-[16px] flex gap-sm">
             <ProvenanceChip kind="interpreted">
-              {regions.length} regions · flood-seg-v3
+              {regions.length} regions · {modelLabel ?? 'flood-seg-v3'}
             </ProvenanceChip>
-            <ProvenanceChip kind="measured">areas · PostGIS</ProvenanceChip>
+            <ProvenanceChip kind="measured">
+              areas · {previewUrl ? 'rasterio + shapely' : 'PostGIS'}
+            </ProvenanceChip>
           </div>
         )}
       </div>

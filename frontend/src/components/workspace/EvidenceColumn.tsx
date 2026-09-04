@@ -67,6 +67,7 @@ export function EvidenceColumn({
   onRefine,
   onFix,
   onEditPlan,
+  fixLabel = 'Reproject parcel layer',
 }: {
   status: PipelineStatus;
   displayStages: ExecutionStageData[];
@@ -77,6 +78,7 @@ export function EvidenceColumn({
   onRefine: () => void;
   onFix: () => void;
   onEditPlan: () => void;
+  fixLabel?: string;
 }) {
   const regions = run?.regions ?? [];
 
@@ -175,7 +177,7 @@ export function EvidenceColumn({
           </div>
           <div className="flex flex-wrap gap-sm p-lg">
             <Button size="sm" onClick={onFix}>
-              Reproject parcel layer
+              {fixLabel}
             </Button>
             <Button size="sm" variant="secondary" onClick={onEditPlan}>
               Edit plan
