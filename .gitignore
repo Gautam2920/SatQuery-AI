@@ -33,3 +33,6 @@ BigEarthNet.txt/
 
 # AI/ML local data
 aiml/data/
+
+# Local raster storage
+backend/storage/

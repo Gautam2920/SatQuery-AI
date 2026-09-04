@@ -3,12 +3,15 @@ from tempfile import NamedTemporaryFile
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.app.api.dependencies import get_db
+from backend.app.models.image import Image
 from backend.app.models.project import Project
 from backend.app.schemas.image import ImageResponse
 from backend.app.services.image_ingestion import ingest_raster
+from backend.app.services.raster_storage import store_raster
 
 
 router = APIRouter(
@@ -64,6 +67,11 @@ def upload_image(
             mime_type=file.content_type or "image/tiff",
         )
 
+        # Analysis needs the pixels later, so the raster outlives the temp file.
+        image.storage_key = store_raster(image.id, temp_path, suffix)
+        db.commit()
+        db.refresh(image)
+
         return image
 
     except Exception:
@@ -73,3 +81,28 @@ def upload_image(
     finally:
         if "temp_path" in locals():
             temp_path.unlink(missing_ok=True)
+
+
+@router.get(
+    "",
+    response_model=list[ImageResponse],
+)
+def list_project_images(
+    project_id: UUID,
+    db: Session = Depends(get_db),
+):
+    project = db.get(Project, project_id)
+
+    if project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found",
+        )
+
+    result = db.execute(
+        select(Image)
+        .where(Image.project_id == project_id)
+        .order_by(Image.created_at.desc())
+    )
+
+    return result.scalars().all()

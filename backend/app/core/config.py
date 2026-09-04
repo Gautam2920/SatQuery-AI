@@ -12,6 +12,11 @@ class Settings(BaseSettings):
     debug: bool = True
     database_url: str = ""
     test_database_url: str = ""
+    raster_storage_dir: Path = BASE_DIR / "storage" / "rasters"
+    cors_allow_origins: list[str] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
 
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / ".env",
