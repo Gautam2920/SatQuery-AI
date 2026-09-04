@@ -44,6 +44,9 @@ export interface SceneImage {
   file_size: number;
   crs: string | null;
   storage_key: string | null;
+  /** Why this scene cannot be analysed, or null if it can. Decided by the
+   *  backend so the compatibility rules live in exactly one place. */
+  analysis_error: string | null;
 }
 
 export interface AnalysisResult {

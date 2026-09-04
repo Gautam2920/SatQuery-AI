@@ -24,6 +24,7 @@ const SCENE_IMAGE = {
   band_count: 6,
   crs: 'EPSG:32613',
   storage_key: 'img-1.tif',
+  analysis_error: null as string | null,
 };
 
 const ANALYSIS = {
@@ -244,17 +245,25 @@ describe('backend unavailable', () => {
     expect(screen.queryByText(/No run yet/)).not.toBeInTheDocument();
   });
 
-  it('keeps a scene the model cannot consume but marks it preview only', async () => {
-    vi.stubGlobal('fetch', mockBackend(ANALYSIS, [{ ...SCENE_IMAGE, band_count: 3 }]));
+  it('shows the backend reason for a scene that cannot be analysed', async () => {
+    // Ingestion refuses incompatible imagery now, so this models a row stored
+    // before those rules existed. The client reports the backend's reason
+    // verbatim rather than restating the compatibility rules itself.
+    const refusal =
+      'Prithvi reads 6 HLS bands (B02 B03 B04 B8A B11 B12); this raster has 3.';
+
+    vi.stubGlobal(
+      'fetch',
+      mockBackend(ANALYSIS, [{ ...SCENE_IMAGE, band_count: 3, analysis_error: refusal }]),
+    );
 
     renderWorkspace();
 
     await screen.findByText('backend connected');
 
-    // the import is not silently discarded - it is shown and explained
     expect(screen.getAllByText('Mexico_HLS.tif').length).toBeGreaterThan(0);
     expect(screen.getByText('Cannot be analysed')).toBeInTheDocument();
-    expect(screen.getByText(/This scene has/)).toBeInTheDocument();
+    expect(screen.getByText(refusal)).toBeInTheDocument();
   });
 });
 

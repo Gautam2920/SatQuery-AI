@@ -4,7 +4,7 @@ from uuid import uuid4
 from backend.app.models.project import Project
 
 
-FIXTURE = Path(__file__).parent / "fixtures" / "sample_satellite.tif"
+FIXTURE = Path(__file__).parent / "fixtures" / "hls_like_sample.tif"
 
 
 def test_upload_image_api(client, db_session):
@@ -23,7 +23,7 @@ def test_upload_image_api(client, db_session):
             f"/projects/{project.id}/images",
             files={
                 "file": (
-                    "sample_satellite.tif",
+                    "hls_like_sample.tif",
                     file,
                     "image/tiff",
                 )
@@ -35,18 +35,19 @@ def test_upload_image_api(client, db_session):
     data = response.json()
 
     assert data["project_id"] == str(project.id)
-    assert data["filename"] == "sample_satellite.tif"
+    assert data["filename"] == "hls_like_sample.tif"
     assert data["mime_type"] == "image/tiff"
-    assert data["width"] == 10
-    assert data["height"] == 10
-    assert data["band_count"] == 3
-    assert data["dtype"] == "uint16"
-    assert data["crs"] == "EPSG:4326"
+    assert data["width"] == 256
+    assert data["height"] == 256
+    assert data["band_count"] == 6
+    assert data["dtype"] == "int16"
+    assert data["crs"] == "EPSG:32613"
+    assert data["analysis_error"] is None
 
-    assert data["bounds_left"] == 77.0
-    assert data["bounds_bottom"] == 27.9
-    assert data["bounds_right"] == 77.1
-    assert data["bounds_top"] == 28.0
+    assert data["bounds_left"] == 500000.0
+    assert data["bounds_bottom"] == 3292320.0
+    assert data["bounds_right"] == 507680.0
+    assert data["bounds_top"] == 3300000.0
 
 
 def test_upload_image_api_returns_404_for_missing_project(client):
@@ -57,7 +58,7 @@ def test_upload_image_api_returns_404_for_missing_project(client):
             f"/projects/{project_id}/images",
             files={
                 "file": (
-                    "sample_satellite.tif",
+                    "hls_like_sample.tif",
                     file,
                     "image/tiff",
                 )

@@ -4,7 +4,7 @@ from backend.app.models.project import Project
 from backend.app.services.image_ingestion import ingest_raster
 
 
-FIXTURE = Path(__file__).parent / "fixtures" / "sample_satellite.tif"
+FIXTURE = Path(__file__).parent / "fixtures" / "hls_like_sample.tif"
 
 
 def test_ingest_raster(db_session, db_owner):
@@ -22,22 +22,22 @@ def test_ingest_raster(db_session, db_owner):
         db_session=db_session,
         project_id=project.id,
         file_path=FIXTURE,
-        filename="sample_satellite.tif",
-        storage_key="projects/test/sample_satellite.tif",
+        filename="hls_like_sample.tif",
+        storage_key="projects/test/hls_like_sample.tif",
     )
 
     assert image.id is not None
     assert image.project_id == project.id
-    assert image.filename == "sample_satellite.tif"
-    assert image.storage_key == "projects/test/sample_satellite.tif"
+    assert image.filename == "hls_like_sample.tif"
+    assert image.storage_key == "projects/test/hls_like_sample.tif"
 
-    assert image.width == 10
-    assert image.height == 10
-    assert image.band_count == 3
-    assert image.dtype == "uint16"
-    assert image.crs == "EPSG:4326"
+    assert image.width == 256
+    assert image.height == 256
+    assert image.band_count == 6
+    assert image.dtype == "int16"
+    assert image.crs == "EPSG:32613"
 
-    assert image.bounds_left == 77.0
-    assert image.bounds_bottom == 27.9
-    assert image.bounds_right == 77.1
-    assert image.bounds_top == 28.0
+    assert image.bounds_left == 500000.0
+    assert image.bounds_bottom == 3292320.0
+    assert image.bounds_right == 507680.0
+    assert image.bounds_top == 3300000.0

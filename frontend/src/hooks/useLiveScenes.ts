@@ -9,11 +9,15 @@ import {
 
 export type BackendStatus = 'connecting' | 'ready' | 'unavailable';
 
-/** Prithvi consumes the six HLS bands; anything else cannot be analysed. */
-const PRITHVI_BAND_COUNT = 6;
-
+/** The backend decides compatibility and says why; the client only reports it. */
 export function isAnalysable(image: SceneImage): boolean {
-  return image.band_count === PRITHVI_BAND_COUNT && image.storage_key !== null;
+  return image.analysis_error === null && image.storage_key !== null;
+}
+
+export function describeUnanalysable(image: SceneImage): string {
+  if (image.analysis_error) return image.analysis_error;
+
+  return 'This scene has no stored raster, so it cannot be analysed.';
 }
 
 interface UseLiveScenes {
@@ -75,18 +79,12 @@ export function useLiveScenes(): UseLiveScenes {
       try {
         const image = await uploadScene(projectId, file);
 
-        // The import succeeded either way. A scene Prithvi cannot read is still
-        // shown and previewable; it is only barred from analysis.
         setScenes((current) => [image, ...current]);
         setSelectedId(image.id);
 
-        if (!isAnalysable(image)) {
-          setError(
-            `${image.filename} imported with ${image.band_count} band` +
-              `${image.band_count === 1 ? '' : 's'}. It can be previewed, but ` +
-              `analysis needs ${PRITHVI_BAND_COUNT} bands (B02 B03 B04 B8A B11 B12).`,
-          );
-        }
+        // Ingestion refuses incompatible imagery, so anything that arrives here
+        // is analysable unless it is an older row stored before those rules.
+        if (!isAnalysable(image)) setError(describeUnanalysable(image));
       } catch (cause) {
         setError(cause instanceof ApiError ? cause.message : String(cause));
       } finally {

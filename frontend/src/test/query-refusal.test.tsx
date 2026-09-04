@@ -25,6 +25,7 @@ const SCENE_IMAGE = {
   file_size: 3014272,
   crs: 'EPSG:32613',
   storage_key: 'img-1.tif',
+  analysis_error: null as string | null,
 };
 
 const SCENE = {

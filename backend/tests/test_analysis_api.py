@@ -12,7 +12,13 @@ HLS_SCENE = (
     / "Mexico_HLS.S30.T13REM.2018026T173609.v2.0_cropped.tif"
 )
 
-THREE_BAND_FIXTURE = Path(__file__).parent / "fixtures" / "sample_satellite.tif"
+FIXTURES = Path(__file__).parent / "fixtures"
+
+#: Six bands, 256x256, EPSG:32613 - the shape the pipeline accepts.
+ANALYSABLE_FIXTURE = FIXTURES / "hls_like_sample.tif"
+
+#: Three bands, 10x10, EPSG:4326 - fails every compatibility rule at once.
+THREE_BAND_FIXTURE = FIXTURES / "sample_satellite.tif"
 
 requires_hls_scene = pytest.mark.skipif(
     not HLS_SCENE.is_file(),
@@ -46,7 +52,7 @@ def test_analysis_requires_an_existing_image(client):
 
 
 def test_analysis_rejects_an_empty_query(client):
-    image = upload(client, create_project(client), THREE_BAND_FIXTURE)
+    image = upload(client, create_project(client), ANALYSABLE_FIXTURE)
 
     response = client.post(f"/images/{image['id']}/analysis", json={"query": ""})
 
@@ -54,7 +60,7 @@ def test_analysis_rejects_an_empty_query(client):
 
 
 def test_analysis_rejects_an_out_of_range_region_count(client):
-    image = upload(client, create_project(client), THREE_BAND_FIXTURE)
+    image = upload(client, create_project(client), ANALYSABLE_FIXTURE)
 
     response = client.post(
         f"/images/{image['id']}/analysis",
@@ -64,20 +70,24 @@ def test_analysis_rejects_an_out_of_range_region_count(client):
     assert response.status_code == 422
 
 
-def test_analysis_rejects_an_image_without_six_bands(client):
-    image = upload(client, create_project(client), THREE_BAND_FIXTURE)
+def test_upload_refuses_a_raster_without_six_bands(client):
+    project_id = create_project(client)
 
-    response = client.post(
-        f"/images/{image['id']}/analysis",
-        json={"query": "Where is the water?"},
-    )
+    with THREE_BAND_FIXTURE.open("rb") as raster:
+        response = client.post(
+            f"/projects/{project_id}/images",
+            files={"file": (THREE_BAND_FIXTURE.name, raster, "image/tiff")},
+        )
 
     assert response.status_code == 422
-    assert "6 bands" in response.json()["detail"]
+    assert "6 HLS bands" in response.json()["detail"]
+
+    # a refused raster must not appear in the project
+    assert client.get(f"/projects/{project_id}/images").json() == []
 
 
 def test_upload_persists_the_raster_for_later_analysis(client):
-    image = upload(client, create_project(client), THREE_BAND_FIXTURE)
+    image = upload(client, create_project(client), ANALYSABLE_FIXTURE)
 
     assert image["storage_key"] == f"{image['id']}.tif"
 
@@ -230,7 +240,7 @@ def test_suggested_but_unbuilt_capabilities_are_refused(client, query, capabilit
 
 @pytest.mark.parametrize("query", ["", "   ", "\t"])
 def test_blank_queries_are_rejected(client, query):
-    image = upload(client, create_project(client), THREE_BAND_FIXTURE)
+    image = upload(client, create_project(client), ANALYSABLE_FIXTURE)
 
     response = client.post(
         f"/images/{image['id']}/analysis",
@@ -258,25 +268,14 @@ def test_a_supported_query_still_answers_with_measured_evidence(client):
 SINGLE_BAND_FIXTURE = Path(__file__).parent / "fixtures" / "single_band_sample.tif"
 
 
-def test_single_band_raster_still_renders_a_preview(client):
-    """A scene the model cannot analyse must still show the operator what they
-    imported, rendered as greyscale rather than refused."""
-    image = upload(client, create_project(client), SINGLE_BAND_FIXTURE)
+def test_upload_refuses_a_single_band_raster(client):
+    project_id = create_project(client)
 
-    response = client.get(f"/images/{image['id']}/preview")
-
-    assert response.status_code == 200
-    assert response.headers["content-type"] == "image/png"
-    assert response.content.startswith(b"\x89PNG")
-
-
-def test_single_band_raster_is_refused_for_analysis_with_a_clear_reason(client):
-    image = upload(client, create_project(client), SINGLE_BAND_FIXTURE)
-
-    response = client.post(
-        f"/images/{image['id']}/analysis",
-        json={"query": "Where is the vegetation?", "region_count": 4},
-    )
+    with SINGLE_BAND_FIXTURE.open("rb") as raster:
+        response = client.post(
+            f"/projects/{project_id}/images",
+            files={"file": (SINGLE_BAND_FIXTURE.name, raster, "image/tiff")},
+        )
 
     assert response.status_code == 422
-    assert "6 bands" in response.json()["detail"]
+    assert "6 HLS bands" in response.json()["detail"]

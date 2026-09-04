@@ -8,6 +8,10 @@ from backend.app.services.raster_metadata import (
     extract_raster_footprint,
     extract_raster_metadata,
 )
+from backend.app.services.scene_compatibility import (
+    SceneIncompatibleError,
+    describe_incompatibility,
+)
 
 
 def ingest_raster(
@@ -24,6 +28,17 @@ def ingest_raster(
         raise FileNotFoundError(f"Raster file not found: {file_path}")
 
     metadata = extract_raster_metadata(file_path)
+
+    incompatibility = describe_incompatibility(
+        band_count=metadata.band_count,
+        width=metadata.width,
+        height=metadata.height,
+        crs=metadata.crs,
+    )
+
+    if incompatibility is not None:
+        raise SceneIncompatibleError(incompatibility)
+
     footprint = extract_raster_footprint(file_path)
 
     image = Image(

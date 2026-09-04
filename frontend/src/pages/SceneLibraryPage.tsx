@@ -8,7 +8,7 @@ import { RegistrationBrackets } from '@/components/ui/RegistrationMark';
 import { StatusDot } from '@/components/ui/StatusDot';
 import { PageShell } from '@/components/workspace/PageShell';
 import { isGeoTiff } from '@/components/workspace/ImageryCanvas';
-import { isAnalysable, useLiveScenes } from '@/hooks/useLiveScenes';
+import { describeUnanalysable, isAnalysable, useLiveScenes } from '@/hooks/useLiveScenes';
 import { useScenePreview } from '@/hooks/useScenePreview';
 import type { SceneImage } from '@/lib/api';
 
@@ -239,8 +239,7 @@ export function SceneLibraryPage() {
               </p>
             ) : (
               <Callout tone="roadmap" tag="PREVIEW ONLY" title="Cannot be analysed">
-                Prithvi reads six HLS bands (B02 B03 B04 B8A B11 B12). This scene has{' '}
-                {selectedScene.band_count}.
+                {describeUnanalysable(selectedScene)}
               </Callout>
             )}
           </>

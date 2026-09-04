@@ -4,7 +4,11 @@ import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { MetaValue } from '@/components/ui/MetaValue';
 import { StatusDot } from '@/components/ui/StatusDot';
-import { isAnalysable, type BackendStatus } from '@/hooks/useLiveScenes';
+import {
+  describeUnanalysable,
+  isAnalysable,
+  type BackendStatus,
+} from '@/hooks/useLiveScenes';
 import type { SceneImage } from '@/lib/api';
 
 const STATUS_COPY: Record<BackendStatus, { tone: 'running' | 'done' | 'failed'; label: string }> = {
@@ -55,8 +59,7 @@ export function LiveScenePanel({
           <MetaValue label="CRS" value={selectedScene.crs ?? 'unknown'} />
           {!isAnalysable(selectedScene) && (
             <Callout tone="roadmap" tag="PREVIEW ONLY" title="Cannot be analysed">
-              Prithvi reads six HLS bands (B02 B03 B04 B8A B11 B12). This scene has{' '}
-              {selectedScene.band_count}, so it can be previewed but not analysed.
+              {describeUnanalysable(selectedScene)}
             </Callout>
           )}
         </>

@@ -3,7 +3,7 @@ from pathlib import Path
 from backend.app.models.project import Project
 
 
-FIXTURE = Path(__file__).parent / "fixtures" / "sample_satellite.tif"
+FIXTURE = Path(__file__).parent / "fixtures" / "hls_like_sample.tif"
 
 
 def upload_test_image(client, db_session):
@@ -22,7 +22,7 @@ def upload_test_image(client, db_session):
             f"/projects/{project.id}/images",
             files={
                 "file": (
-                    "sample_satellite.tif",
+                    "hls_like_sample.tif",
                     file,
                     "image/tiff",
                 )
@@ -40,8 +40,8 @@ def test_search_images_api_returns_matching_image(client, db_session):
     response = client.get(
         "/images/search",
         params={
-            "longitude": 77.05,
-            "latitude": 27.95,
+            "longitude": -104.96,
+            "latitude": 29.79,
         },
     )
 
@@ -52,7 +52,7 @@ def test_search_images_api_returns_matching_image(client, db_session):
     assert len(data) == 1
     assert data[0]["id"] == image["id"]
     assert data[0]["project_id"] == str(project.id)
-    assert data[0]["filename"] == "sample_satellite.tif"
+    assert data[0]["filename"] == "hls_like_sample.tif"
 
 
 def test_search_images_api_returns_empty_for_outside_point(

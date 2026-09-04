@@ -13,11 +13,11 @@ from pathlib import Path
 
 from pyproj import Transformer
 
+from satquery_ai.data.compatibility import PRITHVI_INPUT
 from satquery_ai.perception.region_segmentation import (
     RegionSegmentation,
     SceneRegion,
 )
-from satquery_ai.perception.spectral import PRITHVI_BAND_ORDER
 
 from backend.app.geospatial.regions import (
     WGS84,
@@ -45,9 +45,9 @@ from backend.app.services.query_intent import (
     resolve_query_intent,
 )
 from backend.app.services.raster_storage import resolve_storage_path
+from backend.app.services.scene_compatibility import describe_incompatibility
 
 
-HLS_BAND_IDENTIFIERS = ("B02", "B03", "B04", "B8A", "B11", "B12")
 
 LABEL_DIAGNOSTIC_BANDS = {
     "water": "B03 B8A · NDWI",
@@ -131,7 +131,7 @@ def _ground_regions(
                     ),
                     bands=LABEL_DIAGNOSTIC_BANDS.get(
                         scene_region.land_cover,
-                        " ".join(HLS_BAND_IDENTIFIERS),
+                        PRITHVI_INPUT.band_summary,
                     ),
                     provenance="measured",
                     box=_pixel_box(measured.pixel_bounds, segmentation.tile_size),
@@ -333,11 +333,15 @@ def analyze_scene(image: Image, query: str, region_count: int) -> AnalysisRespon
     except FileNotFoundError as error:
         raise SceneAnalysisError(str(error)) from error
 
-    if image.band_count != len(PRITHVI_BAND_ORDER):
-        raise SceneAnalysisError(
-            f"Prithvi requires {len(PRITHVI_BAND_ORDER)} bands "
-            f"({', '.join(PRITHVI_BAND_ORDER)}); this image has {image.band_count}."
-        )
+    incompatibility = describe_incompatibility(
+        band_count=image.band_count,
+        width=image.width,
+        height=image.height,
+        crs=image.crs,
+    )
+
+    if incompatibility is not None:
+        raise SceneAnalysisError(incompatibility)
 
     recorder = _StageRecorder()
 

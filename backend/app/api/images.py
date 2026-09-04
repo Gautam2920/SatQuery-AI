@@ -13,6 +13,7 @@ from backend.app.models.user import User
 from backend.app.schemas.image import ImageResponse
 from backend.app.services.image_ingestion import ingest_raster
 from backend.app.services.raster_storage import store_raster
+from backend.app.services.scene_compatibility import SceneIncompatibleError
 
 
 router = APIRouter(
@@ -55,13 +56,19 @@ def upload_image(
             while chunk := file.file.read(1024 * 1024):
                 temp_file.write(chunk)
 
-        image = ingest_raster(
-            db_session=db,
-            project_id=project_id,
-            file_path=temp_path,
-            filename=file.filename,
-            mime_type=file.content_type or "image/tiff",
-        )
+        try:
+            image = ingest_raster(
+                db_session=db,
+                project_id=project_id,
+                file_path=temp_path,
+                filename=file.filename,
+                mime_type=file.content_type or "image/tiff",
+            )
+        except SceneIncompatibleError as error:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(error),
+            ) from error
 
         # Analysis needs the pixels later, so the raster outlives the temp file.
         image.storage_key = store_raster(image.id, temp_path, suffix)

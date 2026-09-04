@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 
-FIXTURE = Path(__file__).parent / "fixtures" / "sample_satellite.tif"
+FIXTURE = Path(__file__).parent / "fixtures" / "hls_like_sample.tif"
 
 
 def create_project(test_client, name="Owned project"):
@@ -21,7 +21,7 @@ def upload_image(test_client, project_id):
     with FIXTURE.open("rb") as file:
         response = test_client.post(
             f"/projects/{project_id}/images",
-            files={"file": ("sample_satellite.tif", file, "image/tiff")},
+            files={"file": ("hls_like_sample.tif", file, "image/tiff")},
         )
 
     assert response.status_code == 201, response.text
@@ -80,7 +80,7 @@ def test_images_cannot_be_uploaded_into_another_users_project(client, other_clie
     with FIXTURE.open("rb") as file:
         response = client.post(
             f"/projects/{project_id}/images",
-            files={"file": ("sample_satellite.tif", file, "image/tiff")},
+            files={"file": ("hls_like_sample.tif", file, "image/tiff")},
         )
 
     assert response.status_code == 404
