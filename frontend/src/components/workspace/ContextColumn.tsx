@@ -10,8 +10,9 @@ import type { Run, Scene } from '@/data/types';
 import type { PipelineStatus } from '@/hooks/useRunPipeline';
 
 const SUGGESTED = [
-  'has the shoreline retreated since 2019?',
-  'how many structures fall inside the extent?',
+  'Where is the water?',
+  'Where is the built-up ground?',
+  'Summarise this scene',
 ];
 const REFINE = ['restrict to cropland only', 'exclude saturated soil', 'compare to 2019'];
 const DEFAULT_PLAN =
@@ -163,7 +164,7 @@ export function ContextColumn({
         </>
       ) : (
         <>
-          {status === 'failure' && (
+          {(status === 'failure' || status === 'refused') && (
             <>
               <span className="label-caps text-secondary">Query</span>
               <QueryInput

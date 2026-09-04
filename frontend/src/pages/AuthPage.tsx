@@ -111,7 +111,11 @@ export function AuthPage() {
           ))}
         </div>
 
-        <form className="flex w-[320px] max-w-full flex-col gap-md" onSubmit={handleSubmit} noValidate>
+        <form
+          className="flex w-[320px] max-w-full flex-col gap-md"
+          onSubmit={(event) => void handleSubmit(event)}
+          noValidate
+        >
           <TextInput
             label="Work email"
             type="email"

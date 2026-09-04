@@ -23,6 +23,8 @@ interface UseAnalysisRun {
 }
 
 function toRun(result: AnalysisResult): Run {
+  const refused = result.outcome !== 'answered';
+
   return {
     id: result.runId,
     date: new Date().toISOString().slice(0, 10),
@@ -30,7 +32,9 @@ function toRun(result: AnalysisResult): Run {
     elapsed: result.elapsed,
     query: result.query,
     sceneId: result.scene.id,
-    state: 'complete',
+    state: refused ? 'refused' : 'complete',
+    refusal: refused ? (result.refusal ?? undefined) : undefined,
+    refusalKind: refused ? (result.outcome as Run['refusalKind']) : undefined,
     confidence: result.confidence,
     plan: `Resolved intent: ${result.intent}. Prithvi encoder segments the scene; areas and coordinates are measured from the raster CRS.`,
     answer: result.answer,
@@ -82,7 +86,7 @@ export function useAnalysisRun(): UseAnalysisRun {
 
         setResult(analysis);
         setActiveRun(toRun(analysis));
-        setStatus('answer');
+        setStatus(analysis.outcome === 'answered' ? 'answer' : 'refused');
       } catch (cause) {
         const message = cause instanceof ApiError ? cause.message : String(cause);
 

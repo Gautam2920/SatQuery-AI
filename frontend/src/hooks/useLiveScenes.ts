@@ -40,13 +40,17 @@ export function useLiveScenes(): UseLiveScenes {
     void (async () => {
       try {
         const project = await ensureWorkspaceProject();
-        const images = (await listProjectImages(project.id)).filter(isAnalysable);
+        const images = await listProjectImages(project.id);
 
         if (cancelled) return;
 
         setProjectId(project.id);
         setScenes(images);
-        setSelectedId((current) => current ?? images[0]?.id ?? null);
+        // Prefer a scene the model can actually run on, but keep the rest
+        // listed so an imported scene never silently disappears.
+        setSelectedId(
+          (current) => current ?? (images.find(isAnalysable) ?? images[0])?.id ?? null,
+        );
         setStatus('ready');
       } catch (cause) {
         if (cancelled) return;
@@ -71,16 +75,18 @@ export function useLiveScenes(): UseLiveScenes {
       try {
         const image = await uploadScene(projectId, file);
 
-        if (!isAnalysable(image)) {
-          setError(
-            `${image.filename} has ${image.band_count} bands; Prithvi needs ` +
-              `${PRITHVI_BAND_COUNT} (B02 B03 B04 B8A B11 B12).`,
-          );
-          return;
-        }
-
+        // The import succeeded either way. A scene Prithvi cannot read is still
+        // shown and previewable; it is only barred from analysis.
         setScenes((current) => [image, ...current]);
         setSelectedId(image.id);
+
+        if (!isAnalysable(image)) {
+          setError(
+            `${image.filename} imported with ${image.band_count} band` +
+              `${image.band_count === 1 ? '' : 's'}. It can be previewed, but ` +
+              `analysis needs ${PRITHVI_BAND_COUNT} bands (B02 B03 B04 B8A B11 B12).`,
+          );
+        }
       } catch (cause) {
         setError(cause instanceof ApiError ? cause.message : String(cause));
       } finally {

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { Callout } from '@/components/ui/Callout';
 import { MetaValue } from '@/components/ui/MetaValue';
 import { StatusDot } from '@/components/ui/StatusDot';
-import type { BackendStatus } from '@/hooks/useLiveScenes';
+import { isAnalysable, type BackendStatus } from '@/hooks/useLiveScenes';
 import type { SceneImage } from '@/lib/api';
 
 const STATUS_COPY: Record<BackendStatus, { tone: 'running' | 'done' | 'failed'; label: string }> = {
@@ -47,8 +47,18 @@ export function LiveScenePanel({
         <>
           <MetaValue label="Id" value={selectedScene.filename} />
           <MetaValue label="Size" value={`${selectedScene.width} × ${selectedScene.height} px`} />
-          <MetaValue label="Bands" value={String(selectedScene.band_count)} tone="measured" />
+          <MetaValue
+            label="Bands"
+            value={String(selectedScene.band_count)}
+            tone="measured"
+          />
           <MetaValue label="CRS" value={selectedScene.crs ?? 'unknown'} />
+          {!isAnalysable(selectedScene) && (
+            <Callout tone="roadmap" tag="PREVIEW ONLY" title="Cannot be analysed">
+              Prithvi reads six HLS bands (B02 B03 B04 B8A B11 B12). This scene has{' '}
+              {selectedScene.band_count}, so it can be previewed but not analysed.
+            </Callout>
+          )}
         </>
       ) : (
         <p className="body-sm text-secondary">
@@ -73,6 +83,7 @@ export function LiveScenePanel({
               )}
             >
               {scene.filename}
+              {!isAnalysable(scene) && ' · preview only'}
             </button>
           ))}
         </div>

@@ -1,12 +1,20 @@
 import uuid
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class AnalysisRequest(BaseModel):
     query: str = Field(min_length=1, max_length=500)
     region_count: int = Field(default=4, ge=2, le=8)
+
+    @field_validator("query")
+    @classmethod
+    def reject_blank_query(cls, query: str) -> str:
+        if not query.strip():
+            raise ValueError("Query cannot be blank")
+
+        return query
 
 
 class StageDetail(BaseModel):
@@ -62,17 +70,35 @@ class AnalysisScene(BaseModel):
     gsd: str
     extent: str
     kind: Literal["optical", "sar"]
+    #: Scene centre in EPSG:4326, so the canvas can report where it actually is.
+    #: None when the raster carries no CRS to reproject from.
+    center_latitude: float | None = Field(default=None, serialization_alias="centerLatitude")
+    center_longitude: float | None = Field(
+        default=None, serialization_alias="centerLongitude"
+    )
+
+    model_config = {"populate_by_name": True}
 
 
 class AnalysisResponse(BaseModel):
+    """The result of asking a scene a question.
+
+    `outcome` is the discriminator the client must read before showing anything.
+    Only "answered" carries an answer, a confidence and regions; the other two
+    carry a `refusal` explaining why no analysis was performed, and the stage
+    list then reports only the stages that actually ran.
+    """
+
     run_id: str = Field(serialization_alias="runId")
     image_id: uuid.UUID = Field(serialization_alias="imageId")
+    outcome: Literal["answered", "unsupported", "insufficient_evidence"]
+    refusal: str | None = None
     query: str
     intent: str
     elapsed: str
     scene: AnalysisScene
     answer: list[AnswerToken]
-    confidence: float
+    confidence: float | None
     confidence_note: str = Field(serialization_alias="confidenceNote")
     provenance: list[Literal["interpreted", "measured", "change"]]
     regions: list[EvidenceRegion]

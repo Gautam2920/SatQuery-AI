@@ -55,7 +55,12 @@ export interface EvidenceRegion {
   };
 }
 
-export type RunState = 'complete' | 'failed';
+export type RunState = 'complete' | 'refused' | 'failed';
+
+/** Why a run produced no answer. `unsupported` means the question is outside
+ *  what this build can do; `insufficient_evidence` means the question was
+ *  understood but the scene held nothing to support an answer. */
+export type RefusalKind = 'unsupported' | 'insufficient_evidence';
 
 /** A single immutable run. Re-running with edited parameters creates a new run
  *  linked to its parent (not modelled here — prototype scope). */
@@ -83,6 +88,9 @@ export interface Run {
   stages?: ExecutionStageData[];
   /** failure diagnostic shown in the run-halted callout */
   failure?: string;
+  /** set when the backend declined to answer; no answer or confidence exists */
+  refusal?: string;
+  refusalKind?: RefusalKind;
 }
 
 /** The answer is prose, not a card. It is composed of typed tokens so numeric
@@ -99,6 +107,9 @@ export interface Scene {
   pass: string;
   crs: string;
   gsd: string;
+  /** measured centre in EPSG:4326; absent when the raster carries no CRS */
+  centerLatitude?: number | null;
+  centerLongitude?: number | null;
   cloud?: string;
   polarisation?: string;
   extent: string;

@@ -9,7 +9,7 @@ import {
 } from '@/data/runs';
 import type { ExecutionStageData, Run } from '@/data/types';
 
-export type PipelineStatus = 'idle' | 'running' | 'answer' | 'failure';
+export type PipelineStatus = 'idle' | 'running' | 'answer' | 'refused' | 'failure';
 
 /** Watchable stage advance. The real product advances at --dur-pipeline (400ms);
  *  slowed here so a reviewer can follow the orchestrator's method. */

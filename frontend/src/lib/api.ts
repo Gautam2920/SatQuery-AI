@@ -7,7 +7,13 @@
    workspace never shows an invented result.
    ========================================================================== */
 
-import type { AnswerToken, EvidenceRegion, ExecutionStageData, Scene } from '@/data/types';
+import type {
+  AnswerToken,
+  EvidenceRegion,
+  ExecutionStageData,
+  RefusalKind,
+  Scene,
+} from '@/data/types';
 import {
   clearStoredSession,
   readStoredToken,
@@ -34,6 +40,8 @@ export interface SceneImage {
   width: number;
   height: number;
   band_count: number;
+  dtype: string;
+  file_size: number;
   crs: string | null;
   storage_key: string | null;
 }
@@ -41,12 +49,16 @@ export interface SceneImage {
 export interface AnalysisResult {
   runId: string;
   imageId: string;
+  /** Read this before anything else: only "answered" carries an answer,
+   *  a confidence and regions. */
+  outcome: 'answered' | RefusalKind;
+  refusal: string | null;
   query: string;
   intent: string;
   elapsed: string;
   scene: Scene;
   answer: AnswerToken[];
-  confidence: number;
+  confidence: number | null;
   confidenceNote: string;
   provenance: EvidenceRegion['provenance'][];
   regions: EvidenceRegion[];

@@ -165,6 +165,41 @@ export function EvidenceColumn({
         </>
       )}
 
+      {status === 'refused' && run && (
+        <>
+          <SectionHeader>Result · run {run.id}</SectionHeader>
+          <div className="px-lg pb-[14px]">
+            <Callout
+              tone={run.refusalKind === 'unsupported' ? 'roadmap' : 'alert'}
+              tag={run.refusalKind === 'unsupported' ? 'NOT SUPPORTED' : undefined}
+              title={
+                run.refusalKind === 'unsupported'
+                  ? 'Outside what this build can answer'
+                  : 'Not enough evidence in this scene'
+              }
+            >
+              {run.refusal}
+            </Callout>
+          </div>
+          <SectionHeader meta={`${displayStages.length} stages · ${run.elapsed}`}>
+            Execution trace
+          </SectionHeader>
+          <div className="px-lg">
+            <ExecutionTrace stages={displayStages} />
+          </div>
+          <p className="body-sm prose-measure px-lg pt-md text-secondary">
+            No analysis was performed, so there is no answer, confidence or evidence to
+            show. Ask where the water, vegetation or built-up ground is, or for a
+            breakdown of the whole scene.
+          </p>
+          <div className="flex flex-wrap gap-sm p-lg">
+            <Button size="sm" variant="secondary" onClick={onRefine}>
+              Refine query
+            </Button>
+          </div>
+        </>
+      )}
+
       {status === 'failure' && run && (
         <>
           <SectionHeader>Result · run {run.id}</SectionHeader>

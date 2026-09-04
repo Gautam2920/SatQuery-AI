@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import App from '@/App';
 import { clearStoredSession, readStoredToken } from '@/lib/session';
 import { signInForTest } from './session';
+import { requestUrl } from './http';
 
 const ACCOUNT = {
   id: '00000000-0000-0000-0000-000000000001',
@@ -57,7 +58,7 @@ describe('protected routes', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn((input: RequestInfo | URL) => {
-        const url = String(input);
+        const url = requestUrl(input);
         if (url.endsWith('/auth/me')) return jsonResponse(ACCOUNT);
         return jsonResponse([]);
       }),
@@ -73,7 +74,7 @@ describe('signing in', () => {
   it('stores the session and continues to the library', async () => {
     const user = userEvent.setup();
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
-      const url = String(input);
+      const url = requestUrl(input);
       if (url.endsWith('/auth/login')) return jsonResponse(SESSION);
       if (url.endsWith('/auth/me')) return jsonResponse(ACCOUNT);
       return jsonResponse([]);

@@ -54,6 +54,21 @@ function run(overrides: Partial<Run> = {}): Run {
   };
 }
 
+interface ExportedBundle {
+  run: { confidence: number | null };
+  execution_trace?: unknown[];
+  plan?: string | null;
+  geojson: {
+    type: string;
+    crs: string;
+    features: { geometry: { coordinates: number[][][] } }[];
+  };
+}
+
+async function readBundle(blob: Blob): Promise<ExportedBundle> {
+  return JSON.parse(new TextDecoder().decode(await blob.arrayBuffer())) as ExportedBundle;
+}
+
 async function readBlob(blob: Blob): Promise<string> {
   return new Uint8Array(await blob.arrayBuffer()).reduce(
     (text, byte) => text + String.fromCharCode(byte),
@@ -92,12 +107,14 @@ describe('run export', () => {
 
   it('builds a GeoJSON feature collection from the measured geometry', async () => {
     const generated = await generateExport(run(), 'bundle', ALL_OPTIONS);
-    const bundle = JSON.parse(new TextDecoder().decode(await generated.blob.arrayBuffer()));
+    const bundle = await readBundle(generated.blob);
 
     expect(bundle.geojson.type).toBe('FeatureCollection');
     expect(bundle.geojson.crs).toBe('EPSG:4326');
     expect(bundle.geojson.features).toHaveLength(1);
-    expect(bundle.geojson.features[0].geometry.coordinates[0][0]).toEqual([-104.74, 28.75]);
+
+    const [firstFeature] = bundle.geojson.features;
+    expect(firstFeature?.geometry.coordinates[0]?.[0]).toEqual([-104.74, 28.75]);
     expect(bundle.run.confidence).toBe(0.72);
     expect(bundle.execution_trace).toHaveLength(1);
   });
@@ -108,7 +125,7 @@ describe('run export', () => {
       executionTrace: false,
       modelVersions: false,
     });
-    const bundle = JSON.parse(new TextDecoder().decode(await generated.blob.arrayBuffer()));
+    const bundle = await readBundle(generated.blob);
 
     expect(bundle.execution_trace).toBeUndefined();
     expect(bundle.plan).toBeUndefined();

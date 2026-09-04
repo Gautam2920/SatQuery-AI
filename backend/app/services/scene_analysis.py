@@ -11,6 +11,8 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
+from pyproj import Transformer
+
 from satquery_ai.perception.region_segmentation import (
     RegionSegmentation,
     SceneRegion,
@@ -18,6 +20,7 @@ from satquery_ai.perception.region_segmentation import (
 from satquery_ai.perception.spectral import PRITHVI_BAND_ORDER
 
 from backend.app.geospatial.regions import (
+    WGS84,
     MeasuredRegion,
     format_area,
     format_centroid,
@@ -37,6 +40,7 @@ from backend.app.schemas.analysis import (
 from backend.app.services.perception_model import get_region_segmenter
 from backend.app.services.query_intent import (
     INTENT_RESOLVER,
+    OFF_TOPIC_REFUSAL as QUERY_OUT_OF_SCOPE,
     QueryIntent,
     resolve_query_intent,
 )
@@ -153,10 +157,11 @@ def _renumber(selected: list[_GroundedRegion]) -> list[_GroundedRegion]:
     ]
 
 
-def _unmatched_answer(
+def _insufficient_evidence_refusal(
     intent: QueryIntent,
     land_cover_fractions: dict[str, float],
-) -> list[AnswerToken]:
+) -> str:
+    """Explain what the scene actually showed instead of inventing an answer."""
     requested_fraction = sum(
         fraction
         for land_cover, fraction in land_cover_fractions.items()
@@ -164,33 +169,18 @@ def _unmatched_answer(
     )
 
     if requested_fraction == 0:
-        return [
-            AnswerToken(
-                t="text",
-                value=(
-                    f"No pixel in the analysed tile satisfies {intent.description}. "
-                    "The spectral indices computed over the scene did not meet the "
-                    "threshold for that land cover anywhere."
-                ),
-            )
-        ]
+        return (
+            f"No pixel in the analysed tile satisfies {intent.description}. The "
+            "spectral indices computed over this scene did not meet the threshold "
+            "for that land cover anywhere, so there is no evidence to report."
+        )
 
-    return [
-        AnswerToken(t="text", value="No region is predominantly "),
-        AnswerToken(t="text", value=f"{intent.focus}, though it accounts for "),
-        AnswerToken(
-            t="value",
-            value=f"{requested_fraction * 100:.1f}%",
-            tone="measured",
-        ),
-        AnswerToken(
-            t="text",
-            value=(
-                " of the analysed tile as scattered pixels below the minimum "
-                "region size."
-            ),
-        ),
-    ]
+    return (
+        f"No region of the analysed tile is predominantly {intent.focus}. It "
+        f"accounts for {requested_fraction * 100:.1f}% of the tile as scattered "
+        f"pixels below the {MINIMUM_REGION_PIXELS}-pixel minimum region size, "
+        "which is too little evidence to locate."
+    )
 
 
 def _synthesize_answer(
@@ -244,11 +234,29 @@ def _synthesize_answer(
     return tokens
 
 
+def _scene_center_wgs84(image: Image) -> tuple[float | None, float | None]:
+    if not image.crs:
+        return None, None
+
+    center_x = (image.bounds_left + image.bounds_right) / 2
+    center_y = (image.bounds_bottom + image.bounds_top) / 2
+
+    try:
+        transformer = Transformer.from_crs(image.crs, WGS84, always_xy=True)
+        longitude, latitude = transformer.transform(center_x, center_y)
+    except Exception:
+        return None, None
+
+    return latitude, longitude
+
+
 def _scene_summary(image: Image, segmentation: RegionSegmentation) -> AnalysisScene:
     ground_sample_distance = abs(image.bounds_right - image.bounds_left) / image.width
     tile_extent_kilometres = (
         segmentation.tile_size * ground_sample_distance / METRES_PER_KILOMETRE
     )
+
+    latitude, longitude = _scene_center_wgs84(image)
 
     return AnalysisScene(
         id=Path(image.filename).stem,
@@ -257,6 +265,60 @@ def _scene_summary(image: Image, segmentation: RegionSegmentation) -> AnalysisSc
         gsd=f"{ground_sample_distance:.0f} m/px",
         extent=f"{tile_extent_kilometres:.2f} x {tile_extent_kilometres:.2f} km",
         kind="optical",
+        center_latitude=latitude,
+        center_longitude=longitude,
+    )
+
+
+def _refused_response(
+    image: Image,
+    query: str,
+    intent: QueryIntent,
+    outcome: str,
+    refusal: str,
+    stages: list[ExecutionStage],
+    elapsed_seconds: float,
+    scene: AnalysisScene,
+) -> AnalysisResponse:
+    """A result that carries no answer.
+
+    Everything that would imply an analysis happened is left empty: no regions,
+    no confidence, and only the stages that genuinely ran.
+    """
+    return AnalysisResponse(
+        run_id=uuid.uuid4().hex[:6],
+        image_id=image.id,
+        outcome=outcome,
+        refusal=refusal,
+        query=query,
+        intent=intent.description,
+        elapsed=f"{elapsed_seconds:.2f} s",
+        scene=scene,
+        answer=[],
+        confidence=None,
+        confidence_note=refusal,
+        provenance=[],
+        regions=[],
+        stages=stages,
+    )
+
+
+def _scene_summary_without_segmentation(image: Image) -> AnalysisScene:
+    ground_sample_distance = abs(image.bounds_right - image.bounds_left) / image.width
+    width_kilometres = image.width * ground_sample_distance / METRES_PER_KILOMETRE
+    height_kilometres = image.height * ground_sample_distance / METRES_PER_KILOMETRE
+
+    latitude, longitude = _scene_center_wgs84(image)
+
+    return AnalysisScene(
+        id=Path(image.filename).stem,
+        sensor="HLS Sentinel-2",
+        crs=image.crs or "unknown",
+        gsd=f"{ground_sample_distance:.0f} m/px",
+        extent=f"{width_kilometres:.2f} x {height_kilometres:.2f} km",
+        kind="optical",
+        center_latitude=latitude,
+        center_longitude=longitude,
     )
 
 
@@ -293,6 +355,18 @@ def analyze_scene(image: Image, query: str, region_count: int) -> AnalysisRespon
             ),
         ],
     )
+
+    if not intent.is_supported:
+        return _refused_response(
+            image=image,
+            query=query,
+            intent=intent,
+            outcome="unsupported",
+            refusal=intent.refusal or QUERY_OUT_OF_SCOPE,
+            stages=recorder.stages,
+            elapsed_seconds=recorder.total_seconds,
+            scene=_scene_summary_without_segmentation(image),
+        )
 
     segmenter = get_region_segmenter()
 
@@ -374,12 +448,23 @@ def analyze_scene(image: Image, query: str, region_count: int) -> AnalysisRespon
         ],
     )
 
+    if not selected:
+        return _refused_response(
+            image=image,
+            query=query,
+            intent=intent,
+            outcome="insufficient_evidence",
+            refusal=_insufficient_evidence_refusal(
+                intent,
+                segmentation.land_cover_fractions,
+            ),
+            stages=recorder.stages,
+            elapsed_seconds=recorder.total_seconds,
+            scene=_scene_summary(image, segmentation),
+        )
+
     started = time.perf_counter()
-    answer = (
-        _synthesize_answer(intent, selected, analysed_area_square_metres or 1.0)
-        if selected
-        else _unmatched_answer(intent, segmentation.land_cover_fractions)
-    )
+    answer = _synthesize_answer(intent, selected, analysed_area_square_metres or 1.0)
     recorder.record(
         "answer synthesis",
         time.perf_counter() - started,
@@ -392,6 +477,8 @@ def analyze_scene(image: Image, query: str, region_count: int) -> AnalysisRespon
     return AnalysisResponse(
         run_id=uuid.uuid4().hex[:6],
         image_id=image.id,
+        outcome="answered",
+        refusal=None,
         query=query,
         intent=intent.description,
         elapsed=f"{recorder.total_seconds:.2f} s",
@@ -400,8 +487,6 @@ def analyze_scene(image: Image, query: str, region_count: int) -> AnalysisRespon
         confidence=round(confidence, 2),
         confidence_note=(
             f"area-weighted spectral agreement across {len(selected)} regions"
-            if selected
-            else "no region matched the resolved intent"
         ),
         provenance=["interpreted", "measured"],
         regions=[region.evidence for region in selected],

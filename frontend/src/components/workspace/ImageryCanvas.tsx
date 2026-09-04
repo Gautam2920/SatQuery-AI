@@ -1,3 +1,4 @@
+import { useCallback, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { ImageSlot } from '@/components/common/ImageSlot';
 import { ProvenanceChip } from '@/components/ui/ProvenanceChip';
@@ -7,6 +8,25 @@ import type { PipelineStatus } from '@/hooks/useRunPipeline';
 
 const CORNER = 'pointer-events-none absolute h-[12px] w-[12px]';
 
+const GEOTIFF_EXTENSIONS = ['.tif', '.tiff'];
+
+export function isGeoTiff(file: File): boolean {
+  return GEOTIFF_EXTENSIONS.some((extension) =>
+    file.name.toLowerCase().endsWith(extension),
+  );
+}
+
+function formatSceneCenter(scene: Scene): string | null {
+  const { centerLatitude, centerLongitude } = scene;
+
+  if (centerLatitude == null || centerLongitude == null) return null;
+
+  const latitude = `${Math.abs(centerLatitude).toFixed(4)}°${centerLatitude >= 0 ? 'N' : 'S'}`;
+  const longitude = `${Math.abs(centerLongitude).toFixed(4)}°${centerLongitude >= 0 ? 'E' : 'W'}`;
+
+  return `${latitude} ${longitude}`;
+}
+
 export function ImageryCanvas({
   scene,
   regions,
@@ -15,6 +35,7 @@ export function ImageryCanvas({
   status,
   previewUrl,
   modelLabel,
+  onDropScene,
 }: {
   scene: Scene;
   regions: EvidenceRegion[];
@@ -24,8 +45,35 @@ export function ImageryCanvas({
   /** rendered true-colour PNG of exactly the tile the backend analysed */
   previewUrl?: string;
   modelLabel?: string;
+  /** dropping a GeoTIFF on the canvas loads it, which the label has always invited */
+  onDropScene?: (file: File) => void;
 }) {
+  const [draggingFile, setDraggingFile] = useState(false);
+  const [dropError, setDropError] = useState<string | null>(null);
   const running = status === 'running';
+  const sceneCenter = formatSceneCenter(scene);
+
+  const handleDrop = useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault();
+      setDraggingFile(false);
+
+      if (!onDropScene) return;
+
+      const dropped = event.dataTransfer.files?.[0];
+
+      if (!dropped) return;
+
+      if (!isGeoTiff(dropped)) {
+        setDropError(`${dropped.name} is not a GeoTIFF. Drop a .tif or .tiff file.`);
+        return;
+      }
+
+      setDropError(null);
+      onDropScene(dropped);
+    },
+    [onDropScene],
+  );
   const markColor = running ? 'var(--primary)' : 'var(--secondary)';
   const b = (sides: string[]) =>
     Object.fromEntries(sides.map((s) => [s, `1px solid ${markColor}`]));
@@ -41,7 +89,19 @@ export function ImageryCanvas({
       : null;
 
   return (
-    <main className="flex min-w-0 flex-1 flex-col bg-neutral">
+    <main
+      className="flex min-w-0 flex-1 flex-col bg-neutral"
+      onDragOver={(event) => {
+        if (!onDropScene) return;
+        event.preventDefault();
+        setDraggingFile(true);
+      }}
+      onDragLeave={(event) => {
+        if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+        setDraggingFile(false);
+      }}
+      onDrop={handleDrop}
+    >
       {/* instrument chrome — coordinate readout, bands, CRS */}
       <div className="data-sm flex h-[36px] flex-none items-center gap-md border-b border-border px-[14px] text-secondary">
         <span className="text-on-surface">{scene.id}</span>
@@ -58,12 +118,21 @@ export function ImageryCanvas({
             <span className="h-[14px] w-px bg-border" />
           </>
         )}
-        <span>48.8123°N 2.0311°E</span>
-        <span className="h-[14px] w-px bg-border" />
+        {sceneCenter && (
+          <>
+            <span>{sceneCenter}</span>
+            <span className="h-[14px] w-px bg-border" />
+          </>
+        )}
         <span>{scene.crs}</span>
       </div>
 
-      <div className="relative min-h-[280px] flex-1 bg-neutral">
+      <div
+        className={cn(
+          'relative min-h-[280px] flex-1 bg-neutral transition-colors duration-[var(--dur-state)]',
+          draggingFile && 'ring-2 ring-inset ring-primary',
+        )}
+      >
         {previewUrl ? (
           <img
             src={previewUrl}
@@ -75,6 +144,21 @@ export function ImageryCanvas({
             label="SCENE · placeholder imagery, inset flush — drop a GeoTIFF / COG"
             hideLabel={status !== 'idle'}
           />
+        )}
+
+        {draggingFile && (
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-neutral/70">
+            <span className="label-caps text-primary">Drop the GeoTIFF to load it</span>
+          </div>
+        )}
+
+        {dropError && (
+          <div
+            role="alert"
+            className="data-sm absolute left-[16px] right-[16px] top-[14px] z-10 border border-tertiary bg-[var(--tertiary-subtle)] p-sm text-tertiary-strong"
+          >
+            {dropError}
+          </div>
         )}
 
         {/* corner registration brackets */}
@@ -122,13 +206,8 @@ export function ImageryCanvas({
             />
           ))}
 
-        {/* scale bar bottom-left */}
         <div className="pointer-events-none absolute bottom-[16px] left-[16px] flex items-center gap-sm">
-          <span className="relative block h-px w-[64px] bg-secondary">
-            <span className="absolute left-0 top-[-3px] h-[7px] w-px bg-secondary" />
-            <span className="absolute right-0 top-[-3px] h-[7px] w-px bg-secondary" />
-          </span>
-          <span className="data-sm text-secondary">2 km</span>
+          <span className="data-sm text-secondary">{scene.extent}</span>
           <span className="data-sm text-secondary">· {scene.gsd}</span>
         </div>
 
@@ -136,11 +215,9 @@ export function ImageryCanvas({
         {status === 'answer' && regions.length > 0 && (
           <div className="absolute bottom-[14px] right-[16px] flex gap-sm">
             <ProvenanceChip kind="interpreted">
-              {regions.length} regions · {modelLabel ?? 'flood-seg-v3'}
+              {regions.length} regions{modelLabel ? ` · ${modelLabel}` : ''}
             </ProvenanceChip>
-            <ProvenanceChip kind="measured">
-              areas · {previewUrl ? 'rasterio + shapely' : 'PostGIS'}
-            </ProvenanceChip>
+            <ProvenanceChip kind="measured">areas · rasterio + shapely</ProvenanceChip>
           </div>
         )}
       </div>

@@ -46,6 +46,18 @@ export function WorkspacePage() {
   const exportParam = params.get('export');
   const exportOpen = exportParam === '1';
   const sceneParam = params.get('scene');
+  const imageParam = params.get('image');
+
+  // The scene library links here with the image it had selected.
+  const requestedImageId = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!imageParam || requestedImageId.current === imageParam) return;
+    if (!liveScenes.scenes.some((scene) => scene.id === imageParam)) return;
+
+    requestedImageId.current = imageParam;
+    liveScenes.selectScene(imageParam);
+  }, [imageParam, liveScenes]);
 
   const liveScene = liveScenes.selectedScene;
   const scenePreviewObjectUrl = useScenePreview(liveScene?.id);
@@ -212,6 +224,9 @@ export function WorkspacePage() {
             status={status}
             previewUrl={live ? scenePreviewObjectUrl : undefined}
             modelLabel={live ? 'prithvi-eo-v2-tiny · encoder' : undefined}
+            onDropScene={
+              replayingAuthoredRun ? undefined : (file) => void liveScenes.upload(file)
+            }
           />
         }
         evidence={

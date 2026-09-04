@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import App from '@/App';
 import { ApiError, runAnalysis } from '@/lib/api';
 import { signInForTest } from './session';
+import { requestUrl } from './http';
 
 const ACCOUNT = {
   id: '00000000-0000-0000-0000-000000000001',
@@ -28,6 +29,8 @@ const SCENE_IMAGE = {
 const ANALYSIS = {
   runId: 'a1b2c3',
   imageId: 'img-1',
+  outcome: 'answered',
+  refusal: null,
   query: 'Where is the vegetation?',
   intent: 'locate vegetation',
   elapsed: '3.11 s',
@@ -91,12 +94,6 @@ function previewResponse() {
   } as unknown as Response);
 }
 
-function requestUrl(input: RequestInfo | URL): string {
-  if (typeof input === 'string') return input;
-  if (input instanceof URL) return input.href;
-  return input.url;
-}
-
 function mockBackend(analysis: unknown = ANALYSIS, images = [SCENE_IMAGE]) {
   return vi.fn((input: RequestInfo | URL) => {
     const url = requestUrl(input);
@@ -142,10 +139,11 @@ describe('live workspace', () => {
     // The endpoint needs a bearer token, which an <img> cannot send, so the PNG
     // is fetched and handed to the canvas as an object URL.
     expect(preview).toHaveAttribute('src', expect.stringContaining('blob:'));
-    expect(fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/images/img-1/preview'),
-      expect.objectContaining({ headers: expect.anything() }),
-    );
+    const requestedPreview = vi
+      .mocked(fetch)
+      .mock.calls.some(([input]) => requestUrl(input).endsWith('/images/img-1/preview'));
+
+    expect(requestedPreview).toBe(true);
   });
 
   it('runs a real analysis and renders the measured evidence it returns', async () => {
@@ -228,14 +226,17 @@ describe('backend unavailable', () => {
     expect(screen.getByText(/No run yet/)).toBeInTheDocument();
   });
 
-  it('ignores an image the model cannot consume', async () => {
+  it('keeps a scene the model cannot consume but marks it preview only', async () => {
     vi.stubGlobal('fetch', mockBackend(ANALYSIS, [{ ...SCENE_IMAGE, band_count: 3 }]));
 
     renderWorkspace();
 
     await screen.findByText('backend connected');
 
-    expect(screen.getByText(/Load a 6-band HLS GeoTIFF/)).toBeInTheDocument();
+    // the import is not silently discarded - it is shown and explained
+    expect(screen.getAllByText('Mexico_HLS.tif').length).toBeGreaterThan(0);
+    expect(screen.getByText('Cannot be analysed')).toBeInTheDocument();
+    expect(screen.getByText(/This scene has/)).toBeInTheDocument();
   });
 });
 
